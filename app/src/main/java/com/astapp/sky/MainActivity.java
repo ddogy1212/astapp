@@ -85,6 +85,13 @@ public final class MainActivity extends Activity {
         page.setPadding(dp(16),dp(6),dp(16),dp(24));
         scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(tabs);
         int requested=getIntent().getIntExtra("tab",0);
+        if(requested==4 && getIntent().hasExtra("catalog_index")){
+            int requestedIndex=getIntent().getIntExtra("catalog_index",-1);
+            if(requestedIndex>=0 && requestedIndex<CosmicCatalog.ALL.length){
+                selectedCatalog=requestedIndex;
+                selectedCategory="전체";
+            }
+        }
         showTab(Math.max(0,Math.min(TABS.length-1,requested)));
         for(int i=0;i<8;i++){
             final int index=i;
@@ -94,7 +101,15 @@ public final class MainActivity extends Activity {
     }
     @Override public void onNewIntent(Intent intent){
         super.onNewIntent(intent);setIntent(intent);
-        showTab(Math.max(0,Math.min(4,intent.getIntExtra("tab",0))));
+        int tab=Math.max(0,Math.min(4,intent.getIntExtra("tab",0)));
+        if(tab==4 && intent.hasExtra("catalog_index")){
+            int item=intent.getIntExtra("catalog_index",-1);
+            if(item>=0 && item<CosmicCatalog.ALL.length){
+                selectedCatalog=item;
+                selectedCategory="전체";
+            }
+        }
+        showTab(tab);
     }
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private GradientDrawable background(int color,int radius){
