@@ -14,7 +14,7 @@ public final class NasaCredits {
         Credit(String id,String title,String center,String credit,String url){
             nasaId=id;this.title=title;this.center=center;attribution=credit;this.url=url;
         }
-        public String caption(){return "NASA ID "+nasaId+" · "+title;}
+        public String caption(){return nasaId.isEmpty()?"NASA / ESA · "+title:"NASA ID "+nasaId+" · "+title;}
     }
     private static JSONObject catalog;
     private static boolean checked;
