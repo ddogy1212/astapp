@@ -57,6 +57,12 @@ public final class SkyWidgets {
         abstract int size();
         @Override public void onUpdate(Context c,AppWidgetManager m,int[] ids) {
             for(int id:ids)solar(c,id,size(),getClass());
+            for(int i=0;i<8;i++){
+                final int planet=i;
+                if(PlanetPhotos.cached(c,planet)==null){
+                    PlanetPhotos.load(c,planet,photo->{if(photo!=null)refreshSolar(c);});
+                }
+            }
         }
         @Override public void onAppWidgetOptionsChanged(Context c,AppWidgetManager m,int id,android.os.Bundle opts) {
             solar(c,id,size(),getClass());
