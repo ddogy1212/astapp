@@ -43,7 +43,24 @@ public final class NasaPhotos {
                     JSONObject item=items.getJSONObject(i);
                     JSONArray data=item.optJSONArray("data");
                     JSONArray links=item.optJSONArray("links");
-                    if(data==null||links==null||links.length()==0)continue;
+                    if(data==null||data.length()==0||links==null||links.length()==0)continue;
+                    JSONObject meta=data.getJSONObject(0);
+                    String title=meta.optString("title","").toLowerCase(java.util.Locale.ROOT);
+                    String desc=meta.optString("description","").toLowerCase(java.util.Locale.ROOT);
+                    String label=o.english.toLowerCase(java.util.Locale.ROOT);
+                    String queryLabel=o.query.toLowerCase(java.util.Locale.ROOT);
+                    String mainTerm=queryLabel.split(" ")[0];
+                    String messier="";
+                    if(label.startsWith("messier ")){
+                        String number=label.substring("messier ".length()).trim();
+                        messier="m"+number;
+                    }
+                    boolean match=title.contains(label)||
+                        title.contains(mainTerm)||
+                        (messier.length()>1&&(title.contains(messier)||desc.contains("messier "+label.substring(8))))||
+                        desc.contains(label);
+                    if(!match)continue;
+                    if(title.matches(".*(artist|illustrat|concept|diagram|infographic|poster|animation|render|artwork).*"))continue;
                     String href=links.getJSONObject(0).optString("href","");
                     if(!href.startsWith("https://"))continue;
                     URL imageUrl=new URL(href);
@@ -54,7 +71,7 @@ public final class NasaPhotos {
                     if(conn.getResponseCode()!=200){conn.disconnect();continue;}
                     try(InputStream in=conn.getInputStream()){
                         BitmapFactory.Options opt=new BitmapFactory.Options();
-                        opt.inPreferredConfig=Bitmap.Config.RGB_565;
+                        opt.inPreferredConfig=Bitmap.Config.RGB_565;opt.inSampleSize=2;
                         Bitmap full=BitmapFactory.decodeStream(in,null,opt);
                         if(full==null)continue;
                         int w=full.getWidth(),h=full.getHeight();
