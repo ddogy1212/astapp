@@ -23,6 +23,7 @@ public final class MoonPhoto {
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static Bitmap memory;
     private static boolean fetching;
+    private static final java.util.ArrayList<Callback> WAITING=new java.util.ArrayList<>();
     public interface Callback{void ready(Bitmap bitmap);}
     public static synchronized Bitmap cached(Context ctx){
         if(memory!=null && !memory.isRecycled())return memory;
@@ -34,7 +35,11 @@ public final class MoonPhoto {
         Context app=context.getApplicationContext();
         Bitmap found=cached(app);
         if(found!=null){if(callback!=null)MAIN.post(()->callback.ready(found));return;}
-        synchronized(MoonPhoto.class){if(fetching)return;fetching=true;}
+        synchronized(MoonPhoto.class){
+            if(callback!=null)WAITING.add(callback);
+            if(fetching)return;
+            fetching=true;
+        }
         EXEC.execute(()->{
             Bitmap bmp=null;
             try{
@@ -53,9 +58,13 @@ public final class MoonPhoto {
                     bmp.compress(Bitmap.CompressFormat.JPEG,88,out);
                 }
             }catch(Exception ignored){}
-            synchronized(MoonPhoto.class){memory=bmp;fetching=false;}
+            java.util.List<Callback> callbacks;
+            synchronized(MoonPhoto.class){
+                memory=bmp;fetching=false;
+                callbacks=new java.util.ArrayList<>(WAITING);WAITING.clear();
+            }
             Bitmap result=bmp;
-            if(callback!=null)MAIN.post(()->callback.ready(result));
+            for(Callback cb:callbacks)MAIN.post(()->cb.ready(result));
         });
     }
     public static Bitmap phaseComposited(Bitmap photo,long utcMs,int diameter){
