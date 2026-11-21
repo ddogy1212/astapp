@@ -20,10 +20,20 @@ public final class NasaPhotos {
     public interface Callback {void onResult(Bitmap bitmap,String attribution);}
     public static Bitmap cached(Context c,CosmicCatalog.Object o) {
         File f=path(c,o);
-        if(!f.exists())return null;
         BitmapFactory.Options options=new BitmapFactory.Options();
         options.inPreferredConfig=Bitmap.Config.RGB_565;
-        return BitmapFactory.decodeFile(f.getAbsolutePath(),options);
+        if(f.exists()){
+            Bitmap cached=BitmapFactory.decodeFile(f.getAbsolutePath(),options);
+            if(cached!=null)return cached;
+        }
+        for(int i=0;i<CosmicCatalog.ALL.length;i++){
+            if(CosmicCatalog.ALL[i].english.equals(o.english)){
+                try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+".jpg")){
+                    return BitmapFactory.decodeStream(in,null,options);
+                }catch(IOException ignored){return null;}
+            }
+        }
+        return null;
     }
     private static File path(Context c,CosmicCatalog.Object o){
         return new File(c.getCacheDir(),"nasa_"+Integer.toHexString(o.query.hashCode())+".jpg");
