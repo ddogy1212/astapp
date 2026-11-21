@@ -15,12 +15,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
-      - name: Install Android SDK platform
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          echo "Android SDK root: $ANDROID_HOME"
+          if ! command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"
+          else
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
