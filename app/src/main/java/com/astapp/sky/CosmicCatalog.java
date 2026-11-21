@@ -40,7 +40,7 @@ public final class CosmicCatalog {
         new Object("타란툴라 성운","Tarantula Nebula","별 탄생 성운","대마젤란은하 속의 강력한 별 형성 지역.","Tarantula Nebula 30 Doradus",NASA)
     };
     public static int daily(Context c,int widgetId) {
-        long day=System.currentTimeMillis()/86400000L;
+        long day=java.time.LocalDate.now().toEpochDay();
         int offset=c.getSharedPreferences("ast",0).getInt("discover_"+widgetId,0);
         return (int)Math.floorMod(day*17+offset*7,ALL.length);
     }
