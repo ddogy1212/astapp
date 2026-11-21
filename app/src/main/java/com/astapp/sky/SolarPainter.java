@@ -1,94 +1,161 @@
 package com.astapp.sky;
 
+import android.content.Context;
 import android.graphics.*;
 import java.util.Random;
 
-/** Render the actual computed heliocentric coordinates (planet radii are enlarged). */
+/**
+ * One astronomical reference frame (heliocentric J2000 ecliptic) and two
+ * INDEPENDENT LINEAR-AU scale windows. No hand-arranged planet angles.
+ * Actual planet marker sizes are intentionally exaggerated for readability.
+ */
 public final class SolarPainter {
     private SolarPainter(){}
-    private static final int BG=0xff071426;
-    private static final Paint P = new Paint(3);
-
-    public static Bitmap bitmap(int width,int height,long date,boolean compressed,boolean threeD,double yaw,double tilt,double zoom) {
-        Bitmap b=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+    private static final int NAVY=0xff071323,INK=0xffD9E8FF,SOFT=0xff90A8CC;
+    private static final Paint P=new Paint(3);
+    public static Bitmap bitmap(Context context,int w,int h,long date,boolean compressed,
+                                boolean threeD,double yaw,double tilt,double zoom){
+        Bitmap b=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);
         Canvas c=new Canvas(b);
-        draw(c,width,height,date,compressed,threeD,yaw,tilt,zoom);
+        draw(context,c,w,h,date,compressed,threeD,yaw,tilt,zoom);
         return b;
     }
-
-    public static void draw(Canvas c,int w,int h,long date,boolean compressed,boolean threeD,double yaw,double tilt,double zoom) {
-        P.reset(); P.setAntiAlias(true);
-        P.setShader(new LinearGradient(0,0,w,h,0xff0D2340,BG,Shader.TileMode.CLAMP));
+    public static void draw(Context context,Canvas c,int w,int h,long date,boolean compressed,
+                            boolean threeD,double yaw,double tilt,double zoom){
+        P.reset();P.setAntiAlias(true);
+        P.setShader(new LinearGradient(0,0,w,h,0xff142A4B,NAVY,Shader.TileMode.CLAMP));
         c.drawRect(0,0,w,h,P);P.setShader(null);
-        Random stars=new Random(4387);
-        int dots=Math.min(105,Math.max(25,w*h/1100));
-        for(int i=0;i<dots;i++){
+        Random stars=new Random(28711);
+        int count=Math.min(220,Math.max(35,w*h/1600));
+        for(int i=0;i<count;i++){
             float x=stars.nextFloat()*w,y=stars.nextFloat()*h;
-            P.setColor((i%5==0)?0x99A8CFFF:0x55738BA5);
-            c.drawCircle(x,y,(i%9==0)?1.3f:0.65f,P);
+            P.setColor(i%7==0?0x8CB1D0FC:0x56749BCB);
+            c.drawCircle(x,y,i%12==0?1.1f:.6f,P);
         }
-        double edge=Math.min(w,h)*0.42*zoom;
-        double cx=w*.5,cy=h*.51;
-        if(!threeD){yaw=0;tilt=0;}
-        double sinYaw=Math.sin(yaw),cosYaw=Math.cos(yaw),sinTilt=Math.sin(tilt),cosTilt=Math.cos(tilt);
-        // All orbital directions/positions use identical J2000 ecliptic coordinates.
-        for(int n=7;n>=0;n--) {
+        if(threeD){
+            viewport(context,c,0,0,w,h,date,0,7,compressed?31.5:31.5,compressed,
+                     yaw,tilt,zoom,false);
+            return;
+        }
+        // Both panels are true scale inside their own windows:
+        // 0-2.0 AU for the rocky planets, 0-34.5 AU for gas/ice giants.
+        boolean sideBySide = w>h*1.2f;
+        int gap=6,margin=7;
+        if(sideBySide){
+            float pw=(w-2*margin-gap)/2f,ph=h-2*margin;
+            viewport(context,c,margin,margin,pw,ph,date,0,3,2.15,false,0,0,1,true);
+            viewport(context,c,margin+pw+gap,margin,pw,ph,date,4,7,34.5,false,0,0,1,true);
+        }else{
+            float ph=(h-2*margin-gap)/2f,pw=w-2*margin;
+            viewport(context,c,margin,margin,pw,ph,date,0,3,2.15,false,0,0,1,true);
+            viewport(context,c,margin,margin+ph+gap,pw,ph,date,4,7,34.5,false,0,0,1,true);
+        }
+    }
+    private static void viewport(Context context,Canvas c,float left,float top,float w,float h,
+                                 long date,int first,int last,double maxAU,boolean compressed,
+                                 double yaw,double tilt,double zoom,boolean boxed){
+        P.setStyle(Paint.Style.FILL);
+        if(boxed){
+            P.setColor(0xD9142B49);
+            c.drawRoundRect(new RectF(left,top,left+w,top+h),12,12,P);
+        }
+        c.save();
+        c.clipRect(left+1,top+1,left+w-1,top+h-1);
+        float titleH=boxed?22:8;
+        float cx=left+w*.5f,cy=top+titleH+(h-titleH)*(boxed?.53f:.51f);
+        float scale=(Math.min(w,h-titleH)*.415f)*(float)zoom;
+        if(boxed){
+            P.setColor(0xffCDE0FA);P.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
+            P.setTextSize(Math.max(11,Math.min(17,w/17f)));
+            c.drawText(first==0?"INNER · 0–2.15 AU":"OUTER · 0–34.5 AU",left+9,top+15,P);
+            P.setTypeface(Typeface.DEFAULT);
+        }
+        // Draw 1 AU or 10 AU scale tick in each pane.
+        if(boxed){
+            double tick=first==0?1:10;
+            P.setColor(0x5584A2D4);P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(1);
+            float rr=(float)(scale*tick/maxAU);
+            c.drawCircle(cx,cy,rr,P);P.setStyle(Paint.Style.FILL);
+            P.setColor(0xff829BC0);P.setTextSize(Math.max(9,Math.min(12,w/23f)));
+            c.drawText(first==0?"1 AU":"10 AU",cx+rr+3,cy,P);
+        }
+        float sunRadius=Math.max(3.5f,Math.min(7,Math.min(w,h)*.026f));
+        P.setShader(new RadialGradient(cx,cy,sunRadius*3.7f,new int[]{0x99FFD891,0x22FFB654,0x00FFBD7A},null,Shader.TileMode.CLAMP));
+        c.drawCircle(cx,cy,sunRadius*3.7f,P);P.setShader(null);
+        P.setColor(0xffFFC66A);c.drawCircle(cx,cy,sunRadius,P);
+        P.setTypeface(Typeface.create("sans-serif",0));
+        for(int n=last;n>=first;n--){
             Path orbit=new Path();
-            for(int k=0;k<=180;k++){
-                double[] p=Ephemeris.orbitPoint(n,date,Math.PI*2*k/180);
-                float[] q=project(p,cx,cy,edge,compressed,cosYaw,sinYaw,cosTilt,sinTilt);
-                if(k==0)orbit.moveTo(q[0],q[1]);else orbit.lineTo(q[0],q[1]);
+            for(int k=0;k<=160;k++){
+                double[] v=Ephemeris.orbitPoint(n,date,Math.PI*2*k/160);
+                float[] pt=point(v,cx,cy,scale,maxAU,compressed,yaw,tilt);
+                if(k==0)orbit.moveTo(pt[0],pt[1]);else orbit.lineTo(pt[0],pt[1]);
             }
-            P.setStyle(Paint.Style.STROKE);
-            P.setStrokeWidth(n<4?1.1f:.75f);
-            P.setColor(n<4?0x6682A1CF:0x446981B1);
+            P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(boxed?.85f:1.1f);
+            P.setColor(boxed?0x588CA9CF:0x66869CB9);
             c.drawPath(orbit,P);P.setStyle(Paint.Style.FILL);
         }
-        // Sun at the origin.
-        float sunR=Math.max(5f,Math.min(w,h)*.022f);
-        P.setShader(new RadialGradient((float)cx,(float)cy,sunR*3,new int[]{0x88FFE59C,0x44EC902C,0x00FFBC4C},null,Shader.TileMode.CLAMP));
-        c.drawCircle((float)cx,(float)cy,sunR*3,P);P.setShader(null);
-        P.setColor(0xffF7B84E);c.drawCircle((float)cx,(float)cy,sunR,P);
-        P.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
-        P.setTextSize(Math.max(10,Math.min(15,w/35f)));
-        P.setColor(0xffE9DFBA);
-        c.drawText("태양",(float)cx+sunR+3,(float)cy-sunR,P);
-        for(int n=7;n>=0;n--){
-            double[] v=Ephemeris.position(n,date);
-            float[] q=project(v,cx,cy,edge,compressed,cosYaw,sinYaw,cosTilt,sinTilt);
-            float r=(float)Math.max(3.8,Math.min(9.5,Math.min(w,h)*(.017+(n>=4?.005:0))));
-            P.setShader(new RadialGradient(q[0]-r*.32f,q[1]-r*.38f,r*1.8f,
-                new int[]{0xffffffff,Ephemeris.COLOR[n],0xff13213B},new float[]{0,.29f,1},Shader.TileMode.CLAMP));
-            c.drawCircle(q[0],q[1],r,P);P.setShader(null);
-            if(n==5){
-                P.setStyle(Paint.Style.STROKE);P.setColor(0xffC5A57E);P.setStrokeWidth(Math.max(1,r/3));
-                RectF ring=new RectF(q[0]-r*1.65f,q[1]-r*.66f,q[0]+r*1.65f,q[1]+r*.66f);
-                c.drawOval(ring,P);P.setStyle(Paint.Style.FILL);
-            }
-            if(w>175 && h>120){
-                P.setTextSize(Math.max(10,Math.min(15,w/45f)));
-                P.setColor(0xffDBE8FA);
-                float tx=q[0]+r+3,ty=q[1]-r-1;
-                if(tx>w-39)tx=q[0]-r-34;
-                ty=Math.max(12,Math.min(h-4,ty));
+        for(int n=last;n>=first;n--){
+            float[] pt=point(Ephemeris.position(n,date),cx,cy,scale,maxAU,compressed,yaw,tilt);
+            float radius=boxed?Math.max(4.6f,Math.min(10,Math.min(w,h)*.047f)):
+                    Math.max(4.5f,Math.min(13,Math.min(w,h)*.028f));
+            drawPlanet(context,c,n,pt[0],pt[1],radius);
+            // Labels mark true computed positions; no approximate hand-placement.
+            if(w>130 && h>105){
+                P.setShader(null);P.setColor(INK);P.setTextSize(Math.max(9,Math.min(13,w/21f)));
+                float dx=pt[0]<cx?-37:radius+3;
+                float tx=Math.min(left+w-40,Math.max(left+4,pt[0]+dx));
+                float ty=Math.max(top+titleH+8,Math.min(top+h-4,pt[1]-(n%2==0?radius:-(radius+7))));
                 c.drawText(Ephemeris.NAME[n],tx,ty,P);
             }
         }
-        if(w>220 && h>130) {
-            P.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));
-            P.setTextSize(11); P.setColor(0xff91ABC9);
-            c.drawText(compressed?"궤도 간격 압축 · 위치 각도 보존":"실거리 궤도 · 행성 크기 확대",9,h-8,P);
+        if(!boxed){
+            P.setShader(null);P.setTypeface(Typeface.create("sans-serif-medium",0));
+            P.setTextSize(12);P.setColor(SOFT);
+            c.drawText(compressed?"반경 압축 · 실제 방향":"JPL 실제 거리 · 행성 크기는 확대",left+10,top+h-12,P);
         }
+        c.restore();
     }
-
-    private static float[] project(double[] v,double cx,double cy,double edge,boolean compressed,
-                                   double cosYaw,double sinYaw,double cosTilt,double sinTilt){
-        double d=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-        double radius=compressed?Math.pow(d/31.5,0.43):d/31.5;
-        double norm=Math.max(1e-15,Math.sqrt(v[0]*v[0]+v[1]*v[1]));
-        double x=v[0]/norm*radius,y=v[1]/norm*radius,z=v[2]/Math.max(1e-15,d)*radius;
-        double rx=x*cosYaw-y*sinYaw,ry=x*sinYaw+y*cosYaw;
-        double screenY=ry*cosTilt-z*sinTilt;
-        return new float[]{(float)(cx+edge*rx),(float)(cy-edge*screenY)};
+    private static float[] point(double[] v,float cx,float cy,float scale,double maxAU,
+                                 boolean compressed,double yaw,double tilt){
+        double x=v[0],y=v[1],z=v[2];
+        if(compressed){
+            double r=Math.sqrt(x*x+y*y+z*z);
+            if(r>0){double mapped=(Math.pow(1+4*r,.64)-1)/(Math.pow(1+4*maxAU,.64)-1)*maxAU;
+                x*=mapped/r;y*=mapped/r;z*=mapped/r;
+            }
+        }
+        double rx=x*Math.cos(yaw)-y*Math.sin(yaw);
+        double ry=x*Math.sin(yaw)+y*Math.cos(yaw);
+        double zy=ry*Math.cos(tilt)-z*Math.sin(tilt);
+        return new float[]{(float)(cx+rx*scale/maxAU),(float)(cy-zy*scale/maxAU)};
+    }
+    private static void drawPlanet(Context context,Canvas c,int index,float x,float y,float r){
+        Bitmap photo=context==null?null:PlanetPhotos.cached(context,index);
+        P.setShader(null);
+        P.setColor(0x443FADFF);
+        c.drawCircle(x,y,r+2.5f,P);
+        if(photo!=null && !photo.isRecycled()){
+            Path clip=new Path();clip.addCircle(x,y,r,Path.Direction.CW);
+            c.save();c.clipPath(clip);
+            float targetDiameter=2*r;
+            float crop=Math.min(photo.getWidth(),photo.getHeight());
+            RectF dest=new RectF(x-r,y-r,x+r,y+r);
+            float sX=(photo.getWidth()-crop)/2,sY=(photo.getHeight()-crop)/2;
+            P.setColor(Color.WHITE);
+            c.drawBitmap(photo,new Rect((int)sX,(int)sY,(int)(sX+crop),(int)(sY+crop)),dest,P);
+            c.restore();
+        }else{
+            P.setShader(new RadialGradient(x-r*.3f,y-r*.4f,r*1.7f,
+                new int[]{0xffF4F8FF,Ephemeris.COLOR[index],0xff0E1C38},
+                new float[]{0,.35f,1},Shader.TileMode.CLAMP));
+            c.drawCircle(x,y,r,P);P.setShader(null);
+        }
+        if(index==5){
+            P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(Math.max(1,r*.22f));
+            P.setColor(0xffD9BF91);
+            c.drawOval(new RectF(x-r*1.6f,y-r*.63f,x+r*1.6f,y+r*.63f),P);
+            P.setStyle(Paint.Style.FILL);
+        }
     }
 }
