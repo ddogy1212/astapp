@@ -1,7 +1,7 @@
 # ASTAPP 🌌
 Android astronomy launcher widgets and an observing companion.
 
-**Status:** v0.2.0 native Android beta (built by GitHub Actions). Built in native Java, min SDK 26. No user account or paid services.
+**Status:** v0.3.0 native Android beta (built by GitHub Actions). Built in native Java, min SDK 26. No user account or paid services.
 
 ## Features
 - Three Solar-System widgets: 2×2, 4×2, 4×4. **Two separately scaled true-distance orbital panels**: inner 0–2.15 AU / outer 0–34.5 AU, with the actual JPL-derived azimuths and radii within each panel. NASA archived planet photographs are downloaded when available. Date buttons work directly on widgets.
@@ -15,7 +15,7 @@ Solar positions are **approximations**, not byte-for-byte Horizons vectors. Base
 
 Observing planner: geometrical altitude of planets for a user-selected reference location and time. It is **not** a guaranteed visibility forecast (haze, obstructions, moonlight, and cloud cover can affect viewing). Moon phase uses a simplified synodic approximation, clearly labeled. Events are a curated offline schedule, with links to NASA/IMO, **not** a live API feed or local eclipse visibility calculation. NASA imagery is fetched at runtime from public NASA Images API search when internet exists; images might be missing or held under third-party copyright. A cached NASA image is an illustrative photograph, not necessarily the astronomical object in the same time/zoom as the rendering.
 
-## Build APK
+## v0.3 UX and catalog changes\n- Discovery now includes 35 curated objects and first-class planet, moon, dwarf planet, nebula, cluster, galaxy, and star filters. In-app random discovery and text search included.\n- Widgets show verified NASA planet/solar-system archive photos when found (not fabricated renders). Authentic imagery keeps its scientific colors; the rest of the UI is monochrome.\n- Tapping a widget photo opens that exact object's details, not a different random item.\n- Android 15/16 system status/navigation bar and gesture insets are applied to the root. Bottom navigation is placed **above** the OS bar in a compact five-tab layout.\n- No photo is claimed live; some NASA image searches fail or supply only a source link.\n\n## Build APK
 GitHub Actions workflow **Android APK** runs on push to main and can also be started manually. Open Actions → Android APK → latest successful run → Artifacts → **ASTAPP-debug-APK**, unzip, install APK.
 Local build (JDK 17 + Android SDK 35):
 ```sh
