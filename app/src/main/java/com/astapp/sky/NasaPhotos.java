@@ -37,7 +37,7 @@ public final class NasaPhotos {
             String credit="NASA Images (개별 이미지 저작권·크레딧 확인 필요)";
             try {
                 String q=URLEncoder.encode(o.query,"UTF-8");
-                JSONObject result=json("https://images-api.nasa.gov/search?q="+q+"&media_type=image&page_size=5");
+                JSONObject result=jsonUrl("https://images-api.nasa.gov/search?q="+q+"&media_type=image&page_size=5");
                 JSONArray items=result.getJSONObject("collection").getJSONArray("items");
                 for(int i=0;i<items.length();i++){
                     JSONObject item=items.getJSONObject(i);
@@ -76,7 +76,7 @@ public final class NasaPhotos {
             MAIN.post(()->cb.onResult(done,caption));
         });
     }
-    private static JSONObject json(String url) throws Exception {
+    public static JSONObject jsonUrl(String url) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
         c.setConnectTimeout(10000);c.setReadTimeout(12000);
         c.setRequestProperty("Accept","application/json");
