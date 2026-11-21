@@ -30,7 +30,11 @@ public final class NasaPhotos {
             if(CosmicCatalog.ALL[i].english.equals(o.english)){
                 try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+".jpg")){
                     return BitmapFactory.decodeStream(in,null,options);
-                }catch(IOException ignored){return null;}
+                }catch(IOException ignored){
+                    try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+".webp")){
+                        return BitmapFactory.decodeStream(in,null,options);
+                    }catch(IOException missing){return null;}
+                }
             }
         }
         return null;
