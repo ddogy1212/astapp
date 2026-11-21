@@ -209,6 +209,18 @@ public final class MainActivity extends Activity {
     }
     private void showSolar(){
         header("SOLAR SYSTEM / 실제 궤도");
+        if(!getSharedPreferences("ast",0).getBoolean("welcome_read",false)){
+            LinearLayout welcome=card();
+            line(welcome,"WELCOME / 3가지로 시작해 봐","우주를 탐험하는 가장 쉬운 방법");
+            paragraph(welcome,"01  화면 속 행성 터치 → 사진·정보 보기\n02  내행성 / 외행성 버튼 → 원하는 거리로 이동\n03  하단 '도감' → 천체 발견·저장·검색");
+            LinearLayout first=row(welcome);
+            TextView action=button(first,"좋아, 탐험 시작하기",()->{
+                getSharedPreferences("ast",0).edit().putBoolean("welcome_read",true).apply();
+                page.removeView(welcome);
+            });
+            action.setBackground(background(0xffeeeeee,14));
+            action.setTextColor(0xff111111);
+        }
         LinearLayout main=card();
         paragraph(main,"태양 중심 · J2000 황도 좌표 · JPL 1800~2050 근사식. 행성은 실제 계산 좌표를 사용하고 크기만 알아보기 쉽게 키웠어.");
         TextView date=text(new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(solarTime)),16,TEXT,true);
@@ -226,11 +238,7 @@ public final class MainActivity extends Activity {
         button(controls,"◀ 한 달",()->shiftMonth(-1));
         button(controls,"현재 시각",()->{solarTime=System.currentTimeMillis();showTab(0);});
         button(controls,"한 달 ▶",()->shiftMonth(1));
-        LinearLayout scale=row(main);
-        button(scale,compressed?"축척: 궤도 압축":"축척: 실제 거리",()->{
-            compressed=!compressed;getSharedPreferences("ast",0).edit().putBoolean("scale_compressed",compressed).apply();
-            SkyWidgets.refreshAll(this);showTab(0);
-        });
+        paragraph(main,"궤도 좌표와 공전 거리는 실제 계산 기반이야. 행성 표시 크기는 확대되어 있고, NASA 사진 마커는 카메라를 향한 이미지이지 실제 표면 방향을 표현한 3D 지구본이 아니야.");
         LinearLayout planets=card();line(planets,"행성 위치","아래 행성을 누르면 태양 중심 거리와 지구에서 본 방향을 보여줍니다.");
         for(int group=0;group<2;group++){
             LinearLayout r=row(planets);
@@ -274,7 +282,9 @@ public final class MainActivity extends Activity {
             wrap.addView(text(site+" 기준 고도 "+fmt(obs.altitude)+"° · 방위각 "+fmt(obs.azimuth)+"°",13,TEXT,false));
         }
         new AlertDialog.Builder(this).setView(scroll)
-            .setNeutralButton("NASA 천체 정보",(d,which)->openWebsite(PlanetFacts.URL[i]))
+            .setNeutralButton("큰 사진 · 전체 설명",(d,which)->{
+                selectedCatalog=22+i;selectedCategory="전체";showTab(4);
+            })
             .setPositiveButton("닫기",null).show();
     }
     private void openWebsite(String url){
