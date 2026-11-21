@@ -137,13 +137,14 @@ public final class MainActivity extends Activity {
         v.setLineSpacing(dp(3),1.05f);
         return v;
     }
-    private LinearLayout card(){
+    private LinearLayout card(){return card(page);}
+    private LinearLayout card(LinearLayout destination){
         LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(15),dp(16),dp(17));
         GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff1A1A1A,0xff111111});
         bg.setCornerRadius(dp(20));bg.setStroke(dp(1),0xff303030);
         c.setBackground(bg);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(12));
-        page.addView(c,p);return c;
+        destination.addView(c,p);return c;
     }
     private void line(LinearLayout c,String title,String value){
         c.addView(text(title,13,MUTED,false));
@@ -327,46 +328,86 @@ public final class MainActivity extends Activity {
     }
 
     private void showObservation(){
-        header("OBSERVE / 관측 위치");
+        header("OBSERVE / 오늘 밤의 하늘");
         long night=Observation.nextNightAtNine();
         Observation.Coord sun=Observation.sun(night,observerLat,observerLon);
         LinearLayout controls=card();
         line(controls,"관측 위치",site);
-        paragraph(controls,"위도 "+fmt(observerLat)+"° · 경도 "+fmt(observerLon)+"°  |  위치 정보는 기기에 저장");
-        line(controls,"예측 시각",new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(night)));
-        LinearLayout r=row(controls);
-        button(r,"📍 실제 GPS 위치",this::useGps);
-        button(r,"✎ 직접 입력",this::selectSite);
-        paragraph(controls,"GPS는 버튼을 눌렀을 때만 요청하고 백그라운드 위치 추적을 하지 않아. 아래 구름량을 확인할 때만 선택한 좌표가 Open-Meteo로 전달돼.");
-        TextView clouds=text("☁ 내 지역의 실제 구름 예보 확인 중…",14,BLUE,true);
-        clouds.setPadding(0,dp(8),0,dp(12));controls.addView(clouds);
+        paragraph(controls,"위도 "+fmt(observerLat)+"° · 경도 "+fmt(observerLon)+"°");
+        line(controls,"평가 시각",new SimpleDateFormat("yyyy.MM.dd HH:mm z",Locale.KOREA).format(new Date(night)));
+        LinearLayout buttons=row(controls);
+        button(buttons,"⌖ 현재 GPS",this::useGps);
+        button(buttons,"✎ 위치 직접 입력",this::selectSite);
+        paragraph(controls,"현재 위치 사용은 선택 사항이야. GPS는 버튼을 누를 때만 요청하고, 예보를 확인할 때 좌표를 Open-Meteo에 전송해.");
+        TextView clouds=text("날씨 예보를 불러오는 중…",13,MUTED,false);
+        clouds.setPadding(0,dp(8),0,dp(9));controls.addView(clouds);
+        if(sun.altitude>-12)paragraph(controls,"참고: 태양 고도 "+fmt(sun.altitude)+"° · 이 시각 하늘이 충분히 어둡지 않을 수 있어.");
+        TextView rankingTitle=header("관측 후보 · 예측 점수");
+        rankingTitle.setPadding(dp(2),dp(8),0,dp(8));
+        TextView info=text("천체의 고도·구름량·야간 조건·관측 난이도로 비교한 상대 점수야.",12,MUTED,false);
+        page.addView(info);
+        LinearLayout results=new LinearLayout(this);
+        results.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dp(12),0,0);
+        page.addView(results,lp);
+        renderRecommendations(results,night,null);
         final double lat=observerLat,lon=observerLon;
         WeatherForecast.load(lat,lon,night,(coverage,timestamp,error)->{
-            if(activeTab!=1||lat!=observerLat||lon!=observerLon)return;
-            if(coverage==null)clouds.setText("☁ 날씨 자료 없음 · "+error);
-            else clouds.setText("☁ "+timestamp+" 현지 구름량 "+coverage+"%  · Open-Meteo 예보");
+            if(activeTab!=1||lat!=observerLat||lon!=observerLon||
+               !results.isAttachedToWindow())return;
+            clouds.setText(coverage==null?"구름 정보 확인 불가 · "+error:
+                "예보 "+timestamp+" · 구름량 "+coverage+"%  / Open-Meteo");
+            renderRecommendations(results,night,coverage);
         });
-        if(sun.altitude>-12)paragraph(controls,"⚠ 이 시각 태양 고도 "+fmt(sun.altitude)+"°. 충분히 어둡지 않을 수 있어.");
-        List<Observation.Target> list=Observation.sorted(night,observerLat,observerLon);
-        int count=0;
-        for(Observation.Target t:list){
-            LinearLayout c=card();
-            line(c,"0"+(++count)+"  "+Ephemeris.NAME[t.index],fmt(t.coord.altitude)+"° · "+Observation.azimuthText(t.coord.azimuth)+"  ("+fmt(t.coord.azimuth)+"°)");
-            paragraph(c,t.coord.altitude<0?"지평선 아래 · 이 시각에는 보이지 않음":
-                    t.coord.altitude<15?"고도가 낮아 건물·지형·대기의 영향을 많이 받음":
-                    "지평선 위 · 구름·기상·밝기·광공해를 추가 확인해");
-            LinearLayout pr=row(c);
-            final int idx=t.index;
-            button(pr,"행성 사진·자세히 보기",()->planetDialog(idx));
-            if(count>=3)break;
-        }
         LinearLayout source=card();
-        paragraph(source,"현재 1~3위는 밝기 순위가 아닌 천체의 겉보기 고도 순위야. 실제 관측 가능 여부는 구름, 광공해, 지형, 밝기, 달빛 등의 영향을 받아.");
-        sourceButton(source,"관측 좌표 기준","https://ssd.jpl.nasa.gov/planets/approx_pos.html");
-        sourceButton(source,"날씨 정보 제공처","https://open-meteo.com/");
+        line(source,"점수 해석","순위는 관측 가능성을 판단하는 참고자료");
+        paragraph(source,ObservingPlanner.formula());
+        paragraph(source,"현재는 지형·주변 건물·광공해를 모르기 때문에 실제 보임을 보장하지 않아. 태양·행성 위치는 JPL 근사식이며, 심우주 천체 좌표는 J2000 기준점으로 세차 보정을 생략했어.");
+        sourceButton(source,"천체 위치 계산 근거","https://ssd.jpl.nasa.gov/planets/approx_pos.html");
+        sourceButton(source,"구름 예보 출처","https://open-meteo.com/en/docs");
     }
-
-
+    private int indexForTarget(String name){
+        for(int i=0;i<8;i++)if(name.equals(Ephemeris.NAME[i]))return 22+i;
+        if(name.contains("M45"))return 2;
+        if(name.contains("M42"))return 0;
+        if(name.contains("M31"))return 1;
+        if(name.contains("M13"))return 6;
+        if(name.contains("M57"))return 5;
+        return -1;
+    }
+    private void renderRecommendations(LinearLayout container,long night,Integer cloud){
+        container.removeAllViews();
+        List<ObservingPlanner.Candidate> ranked=ObservingPlanner.rank(night,observerLat,observerLon,cloud);
+        int shown=0;
+        for(ObservingPlanner.Candidate obj:ranked){
+            if(!obj.accessible)continue;
+            LinearLayout c=card(container);
+            LinearLayout heading=row(c);
+            TextView name=text(obj.name,19,TEXT,true);
+            heading.addView(name,new LinearLayout.LayoutParams(0,-2,1f));
+            TextView score=text(obj.score+" / 100",14,0xff111111,true);
+            score.setPadding(dp(9),dp(8),dp(9),dp(8));
+            score.setBackground(background(0xffEDEDED,12));
+            heading.addView(score);
+            paragraph(c,obj.kind+" · "+obj.equipment+"  |  고도 "+fmt(obj.coords.altitude)+"° / "+
+                Observation.azimuthText(obj.coords.azimuth)+" ("+fmt(obj.coords.azimuth)+"°)");
+            paragraph(c,obj.why);
+            LinearLayout actions=row(c);
+            int index=indexForTarget(obj.name);
+            button(actions,"천체 사진·상세 정보 ↗",()->{
+                if(index>=0){selectedCatalog=index;selectedCategory="전체";showTab(4);}
+                else openWebsite(obj.source);
+            });
+            if(++shown>=5)break;
+        }
+        if(shown==0){
+            LinearLayout empty=card(container);
+            line(empty,"현재 조건으로 추천할 천체 없음","해당 시각에 고도 10° 이상의 등록 천체가 부족해.");
+            paragraph(empty,"관측 시간을 바꾸거나 하늘이 밝은 시간인지 확인해 봐.");
+        }
+        TextView note=text("예측 점수는 상대적 참고치이며 실제 보이는 정도나 관측 성공 확률이 아니야.",11,MUTED,false);
+        note.setPadding(dp(5),0,dp(5),dp(8));container.addView(note);
+    }
     private void showMoon(){
         header("LUNAR ATLAS / 달");
         long now=System.currentTimeMillis();
