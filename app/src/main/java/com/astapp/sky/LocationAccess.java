@@ -26,8 +26,10 @@ public final class LocationAccess {
         LocationManager manager=(LocationManager)a.getSystemService(Context.LOCATION_SERVICE);
         if(manager==null){callback.result(null,"위치 서비스가 없습니다");return;}
         String provider=null;
-        if(manager.isProviderEnabled(LocationManager.GPS_PROVIDER))provider=LocationManager.GPS_PROVIDER;
+        boolean precise=a.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+        if(precise&&manager.isProviderEnabled(LocationManager.GPS_PROVIDER))provider=LocationManager.GPS_PROVIDER;
         else if(manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))provider=LocationManager.NETWORK_PROVIDER;
+        else if(precise&&manager.isProviderEnabled(LocationManager.GPS_PROVIDER))provider=LocationManager.GPS_PROVIDER;
         if(provider==null){callback.result(null,"휴대전화 위치 기능이 꺼져 있습니다");return;}
         try{
             if(Build.VERSION.SDK_INT>=30){
