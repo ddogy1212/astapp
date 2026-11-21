@@ -174,7 +174,7 @@ public final class MainActivity extends Activity {
         solarTime=c.getTimeInMillis();showTab(0);
     }
     private void showSolar(){
-        header("실제 위치 기반 태양계");
+        header("SOLAR SYSTEM / 실제 궤도");
         LinearLayout main=card();
         paragraph(main,"태양 중심 · J2000 황도 좌표 · JPL 1800~2050 근사식. 행성은 실제 계산 좌표를 사용하고 크기만 알아보기 쉽게 키웠어.");
         TextView date=text(new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(solarTime)),16,TEXT,true);
@@ -183,8 +183,8 @@ public final class MainActivity extends Activity {
         main.addView(planetView,new LinearLayout.LayoutParams(-1,dp(360)));
         paragraph(main,"드래그로 시점 회전 · 두 손가락으로 확대/축소. 실제 내행성 위치를 자세히 보려면 아래 ‘내행성 확대’를 눌러봐.");
         LinearLayout focus=row(main);
-        button(focus,"☀ 전체 태양계",()->{planetView.zoom=1;planetView.invalidate();});
-        button(focus,"🔎 내행성 확대",()->{planetView.zoom=14;planetView.invalidate();});
+        button(focus,"전체 태양계",()->{planetView.zoom=1;planetView.invalidate();});
+        button(focus,"내행성 확대",()->{planetView.zoom=14;planetView.invalidate();});
         LinearLayout controls=row(main);
         button(controls,"◀ 한 달",()->shiftMonth(-1));
         button(controls,"현재 시각",()->{solarTime=System.currentTimeMillis();showTab(0);});
@@ -291,7 +291,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showObservation(){
-        header("🔭 오늘 밤, 내 위치에서");
+        header("OBSERVE / 관측 위치");
         long night=Observation.nextNightAtNine();
         Observation.Coord sun=Observation.sun(night,observerLat,observerLon);
         LinearLayout controls=card();
@@ -332,7 +332,7 @@ public final class MainActivity extends Activity {
 
 
     private void showMoon(){
-        header("🌙 달 아카이브 & 위상");
+        header("LUNAR ATLAS / 달");
         long now=System.currentTimeMillis();
         LinearLayout moon=card();
         ImageView lunar=new ImageView(this);
@@ -362,7 +362,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showEvents(){
-        header("☄ 주요 천문 이벤트");
+        header("SKY EVENTS / 천문 현상");
         LinearLayout intro=card();
         paragraph(intro,"NASA와 국제유성기구(IMO) 일정을 참고한 오프라인 선별 달력이야. 실시간 갱신이나 한국 지역별 가시성 판정은 아직 없어. 날짜는 자료의 UTC 기준일이야.");
         java.util.List<AstroEvents.Event> events=AstroEvents.upcoming();
@@ -374,54 +374,130 @@ public final class MainActivity extends Activity {
             sourceButton(c,"공식 출처",e.source);
         }
     }
+    private boolean categoryMatch(int index,String category){
+        if(category.equals("전체"))return true;
+        if(category.equals("행성"))return SolarBodyFacts.isPlanet(index);
+        if(category.equals("위성"))return index==30||index==32||index==33||index==34;
+        if(category.equals("왜행성"))return index==31;
+        String kind=CosmicCatalog.ALL[index].kind;
+        if(category.equals("성운"))return kind.contains("성운");
+        if(category.equals("은하"))return kind.contains("은하");
+        if(category.equals("성단"))return kind.contains("성단");
+        return kind.contains("초거성")||kind.contains("왜성");
+    }
+    private int nextCatalogInCategory(int from,String filter){
+        for(int step=1;step<=CosmicCatalog.ALL.length;step++){
+            int candidate=(from+step+CosmicCatalog.ALL.length)%CosmicCatalog.ALL.length;
+            if(categoryMatch(candidate,filter))return candidate;
+        }
+        return from;
+    }
     private void showCatalog(){
-        header("DISCOVERY / 천체 아카이브");
+        header("COSMIC DISCOVERY");
         if(selectedCatalog<0)selectedCatalog=CosmicCatalog.daily(this,-1);
-        CosmicCatalog.Object obj=CosmicCatalog.ALL[selectedCatalog];
-        LinearLayout c=card();
-        line(c,"우주 도감 "+(selectedCatalog+1)+" / "+CosmicCatalog.ALL.length,obj.name);
-        paragraph(c,obj.english+" · "+obj.kind);
-        ImageView image=new ImageView(this);
-        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        image.setBackgroundColor(0xff182E4C);
-        c.addView(image,new LinearLayout.LayoutParams(-1,dp(240)));
-        Bitmap cached=NasaPhotos.cached(this,obj);
-        if(cached!=null)image.setImageBitmap(cached);
-        else {
-            image.setImageDrawable(null);
-            TextView loading=text("NASA Images 사진 검색 중… (없으면 텍스트만 표시)",11,MUTED,false);
-            c.addView(loading);
-            NasaPhotos.load(this,obj,(bitmap,credit)->{
-                if(bitmap!=null && activeTab==4 && selectedCatalog>=0 && CosmicCatalog.ALL[selectedCatalog]==obj){
-                    image.setImageBitmap(bitmap);loading.setText(credit);
-                }else if(bitmap==null)loading.setText("NASA 사진 미확인 · 자료 링크에서 직접 확인 가능");
+        final String[] categories={"전체","행성","위성","왜행성","성운","은하","성단","항성"};
+        TextView explanation=text("35개 천체 · 행성부터 먼 은하까지",13,MUTED,false);
+        explanation.setPadding(dp(3),0,0,dp(8));
+        page.addView(explanation);
+        HorizontalScrollView filters=new HorizontalScrollView(this);
+        filters.setHorizontalScrollBarEnabled(false);
+        LinearLayout chips=new LinearLayout(this);
+        chips.setOrientation(LinearLayout.HORIZONTAL);
+        chips.setPadding(0,0,dp(2),dp(6));
+        filters.addView(chips);
+        page.addView(filters);
+        for(String category:categories){
+            final boolean selected=selectedCategory.equals(category);
+            TextView chip=text(category,12,selected?0xff090909:TEXT,selected);
+            chip.setGravity(Gravity.CENTER);
+            chip.setMinHeight(dp(40));
+            chip.setPadding(dp(15),dp(9),dp(15),dp(9));
+            chip.setBackground(background(selected?0xffF8F8F8:0xff252525,20));
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-2,dp(40));
+            params.setMargins(0,0,dp(7),0);
+            chips.addView(chip,params);
+            chip.setOnClickListener(v->{
+                selectedCategory=category;
+                if(!categoryMatch(selectedCatalog,category))selectedCatalog=nextCatalogInCategory(selectedCatalog,category);
+                showTab(4);
             });
         }
-        CosmicDetails.Info details=CosmicDetails.get(selectedCatalog);
-        line(c,"천체 유형",obj.kind+" · "+obj.english);
-        line(c,"지구에서의 거리",details.distance);
-        line(c,"하늘에서 찾는 영역",details.region);
-        line(c,"무엇이 특별할까?",obj.fact);
-        paragraph(c,details.science);
-        line(c,"🔭 실제 관측 팁",details.observation);
-        line(c,"💡 알아두면 좋은 사실",details.question);
-        paragraph(c,"사진은 NASA Image Library의 과거 관측 기록이야. 관측 파장·합성 여부·원본 크레딧은 링크에서 확인해 줘. 확인되지 않은 천체 사진은 임의로 만들어 표시하지 않아.");
-        sourceButton(c,"근거가 되는 NASA 연구·설명",details.reference);
+        final CosmicCatalog.Object obj=CosmicCatalog.ALL[selectedCatalog];
+        final int index=selectedCatalog;
+        LinearLayout c=card();
+        TextView label=text(String.format(Locale.KOREA,"%02d / %02d   ·   %s",index+1,CosmicCatalog.ALL.length,obj.kind.toUpperCase(Locale.ROOT)),11,MUTED,true);
+        label.setLetterSpacing(.10f);
+        c.addView(label);
+        TextView name=text(obj.name,27,TEXT,true);
+        name.setPadding(0,dp(6),0,dp(2));
+        c.addView(name);
+        paragraph(c,obj.english);
+        ImageView image=new ImageView(this);
+        image.setScaleType((SolarBodyFacts.isPlanet(index)||SolarBodyFacts.isMoon(index))?
+            ImageView.ScaleType.FIT_CENTER:ImageView.ScaleType.CENTER_CROP);
+        image.setBackground(background(0xff050505,16));
+        image.setClipToOutline(true);
+        c.addView(image,new LinearLayout.LayoutParams(-1,dp(264)));
+        TextView photoCaption=text("NASA 관측 사진을 불러오는 중",11,MUTED,false);
+        photoCaption.setPadding(0,dp(9),0,dp(10));
+        c.addView(photoCaption);
+        // Real archive images only. No fabricated astronomical photographs.
+        Bitmap bitmap=SolarBodyFacts.isPlanet(index)?
+            PlanetPhotos.cached(this,SolarBodyFacts.planetIndex(index)):
+            SolarBodyFacts.isMoon(index)?MoonPhoto.cached(this):NasaPhotos.cached(this,obj);
+        if(bitmap!=null){
+            image.setImageBitmap(bitmap);
+            photoCaption.setText("NASA 아카이브 관측 사진 · 촬영 시각은 현재와 다름");
+        }else if(SolarBodyFacts.isPlanet(index)){
+            PlanetPhotos.load(this,SolarBodyFacts.planetIndex(index),photo->{
+                if(activeTab!=4||selectedCatalog!=index)return;
+                if(photo!=null){image.setImageBitmap(photo);
+                    photoCaption.setText("NASA 탐사선/우주망원경 촬영 · 현재 사진이 아님");}
+                else loadCatalogFallback(obj,index,image,photoCaption);
+            });
+        }else if(SolarBodyFacts.isMoon(index)){
+            MoonPhoto.load(this,photo->{
+                if(activeTab!=4||selectedCatalog!=index)return;
+                if(photo!=null){image.setImageBitmap(photo);
+                    photoCaption.setText("NASA 실제 달 촬영 자료 · 현재 위상이 아님");}
+                else loadCatalogFallback(obj,index,image,photoCaption);
+            });
+        }else loadCatalogFallback(obj,index,image,photoCaption);
+        CosmicDetails.Info details=CosmicDetails.get(index);
+        line(c,"CLASSIFICATION",obj.kind);
+        line(c,"DISTANCE",details.distance);
+        line(c,"LOCATION",details.region);
+        TextView h=text("무엇이 특별할까?",19,TEXT,true);
+        h.setPadding(0,dp(16),0,dp(9));c.addView(h);
+        paragraph(c,obj.fact+"\n\n"+details.science);
+        line(c,"관측 가이드",details.observation);
+        line(c,"알아두면 좋은 사실",details.question);
+        paragraph(c,"사진은 NASA 과거 탐사·관측 자료야. 관측 파장과 사진 크레딧은 반드시 원문을 참고해. 사진을 확인할 수 없으면 임의의 가짜 사진으로 대체하지 않아.");
         LinearLayout buttons=row(c);
-        button(buttons,"↻ 다른 천체",()->{
-            CosmicCatalog.next(this,-1);
-            selectedCatalog=CosmicCatalog.daily(this,-1);
-            showTab(4);SkyWidgets.refreshAll(this);
+        button(buttons,"다른 천체 ↻",()->{
+            selectedCatalog=nextCatalogInCategory(selectedCatalog,selectedCategory);
+            showTab(4);
         });
-        button(buttons,CosmicCatalog.favorite(this,obj.english)?"★ 저장됨":"☆ 즐겨찾기",()->{
+        button(buttons,CosmicCatalog.favorite(this,obj.english)?"★ 저장됨":"☆ 저장",()->{
             CosmicCatalog.toggleFavorite(this,obj.english);showTab(4);
         });
-        sourceButton(c,"NASA 원문/도감",obj.url);
-        sourceButton(c,"NASA 이미지 검색","https://images.nasa.gov/search?q="+Uri.encode(obj.query));
+        sourceButton(c,"NASA 천체 상세 정보",details.reference);
+        sourceButton(c,"NASA 실제 사진 검색","https://images.nasa.gov/search?q="+Uri.encode(obj.query));
         LinearLayout info=card();
-        line(info,"홈 화면에 발견 위젯 추가","2×1 / 2×2 / 4×2 / 4×4");
-        paragraph(info,"위젯의 ↻ 버튼을 누르면 다른 천체를 보여줘. 사진은 인터넷이 있을 때 NASA에서 검색하고 휴대전화에 캐시해.");
-        line(info,"이 버전의 데이터","검증된 천체 "+CosmicCatalog.ALL.length+"개 · 서버 계정 불필요");
+        line(info,"HOME WIDGET","2×1 / 2×2 / 4×2 / 4×4");
+        paragraph(info,"우주 발견 위젯에서도 행성·위성·왜행성이 등장해. 위젯을 누르면 이 상세 정보 화면으로 이동할 수 있어.");
+        paragraph(info,"NASA Images API에서 실제 촬영 사진을 검색하며, 인터넷 연결이나 원본 자료에 따라 이미지를 표시하지 못할 수 있어.");
+    }
+    private void loadCatalogFallback(CosmicCatalog.Object obj,int index,ImageView image,TextView caption){
+        NasaPhotos.load(this,obj,(bitmap,attribution)->{
+            if(activeTab!=4||selectedCatalog!=index)return;
+            if(bitmap!=null){
+                image.setImageBitmap(bitmap);
+                caption.setText("NASA 이미지 검색 자료 · 상세 크레딧은 NASA 원문에서 확인");
+            }else{
+                caption.setText("확인된 관측 사진 없음 · 아래 NASA 원문에서 확인");
+            }
+        });
     }
 
     private final class PlanetView extends View {
