@@ -31,9 +31,13 @@ public final class NasaPhotos {
                 try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+".jpg")){
                     return BitmapFactory.decodeStream(in,null,options);
                 }catch(IOException ignored){
-                    try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+".webp")){
-                        return BitmapFactory.decodeStream(in,null,options);
-                    }catch(IOException missing){return null;}
+                    for(String extension:new String[]{"webp","png"}){
+                        try(InputStream in=c.getAssets().open("nasa/cosmic_"+i+"."+extension)){
+                            Bitmap result=BitmapFactory.decodeStream(in,null,options);
+                            if(result!=null)return result;
+                        }catch(IOException ignoredOther){}
+                    }
+                    return null;
                 }
             }
         }
