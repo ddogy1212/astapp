@@ -12,7 +12,7 @@ public final class CosmicDetails {
     }
     private static final String M="https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-";
     private static final String NASA="https://science.nasa.gov/";
-    public static Info get(int index){return VALUES[Math.max(0,Math.min(VALUES.length-1,index))];}
+    public static Info get(int index){if(index>=SolarBodyFacts.FIRST)return SolarBodyFacts.detail(index);return VALUES[Math.max(0,Math.min(VALUES.length-1,index))];}
     private static final Info[] VALUES={
         new Info("약 1,500광년","오리온자리 · 우리은하",
             "오리온 성운은 원래 차갑고 밀도가 높은 가스·먼지 구름에서 새로운 별들이 탄생하는 영역이야. 중심부의 뜨거운 젊은 별들은 강력한 자외선을 내뿜어 주변 수소 가스를 빛나게 한다. 이곳의 '트라페지움'은 가까이 모여 있는 젊은 별들로 유명해.",
