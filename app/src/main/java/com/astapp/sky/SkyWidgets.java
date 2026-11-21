@@ -46,7 +46,7 @@ public final class SkyWidgets {
         rv.setTextViewText(R.id.solar_title,"☀ AST · 실제 궤도");
         rv.setTextViewText(R.id.solar_date,new SimpleDateFormat("yyyy.MM.dd HH:mm",Locale.KOREA).format(date));
         rv.setTextViewText(R.id.solar_note,compressed?"궤도 간격 압축 / 위치 각도 유지":"실거리 / 행성 크기 확대");
-        rv.setImageViewBitmap(R.id.solar_image,SolarPainter.bitmap(w,h,date,compressed,false,0,0,1));
+        rv.setImageViewBitmap(R.id.solar_image,SolarPainter.bitmap(ctx,w,h,date,compressed,false,0,0,1));
         rv.setOnClickPendingIntent(R.id.solar_prev,broadcast(ctx,klass,SOLAR_STEP,id,1));
         rv.setOnClickPendingIntent(R.id.solar_now,broadcast(ctx,klass,SOLAR_NOW,id,2));
         rv.setOnClickPendingIntent(R.id.solar_next,broadcast(ctx,klass,SOLAR_STEP,id,3));
@@ -152,6 +152,16 @@ public final class SkyWidgets {
     public static final class DiscoveryWide extends DiscoveryBase{int size(){return 2;}}
     public static final class DiscoveryLarge extends DiscoveryBase{int size(){return 3;}}
 
+    /** Redraw planet photos and orbit graphics without triggering further downloads. */
+    public static void refreshSolar(Context c){
+        AppWidgetManager mgr=AppWidgetManager.getInstance(c);
+        Class<?>[] classes={SolarSmall.class,SolarWide.class,SolarLarge.class};
+        for(int i=0;i<classes.length;i++){
+            for(int id:mgr.getAppWidgetIds(new ComponentName(c,classes[i]))){
+                solar(c,id,i,classes[i]);
+            }
+        }
+    }
     /** Called when settings are changed. */
     public static void refreshAll(Context c){
         AppWidgetManager mgr=AppWidgetManager.getInstance(c);
