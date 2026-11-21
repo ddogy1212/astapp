@@ -22,7 +22,8 @@ public final class MainActivity extends Activity {
     private int activeTab=0;
     private long solarTime=System.currentTimeMillis();
     private boolean compressed=false;
-    private PlanetView planetView;
+    private SolarExplorer explorer;
+    private ScrollView pageScroll;
     private int selectedCatalog=-1;
     private double observerLat=37.5665,observerLon=126.9780;
     private String site="서울 기준점(직접 변경 가능)";
@@ -81,6 +82,8 @@ public final class MainActivity extends Activity {
         nav.setPadding(dp(7),dp(7),dp(7),dp(7));
         tabs.addView(nav,new LinearLayout.LayoutParams(-1,-2));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
+        pageScroll=scroll;
+        scroll.setClipToPadding(false);
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(16),dp(6),dp(16),dp(24));
         scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(tabs);
@@ -95,7 +98,12 @@ public final class MainActivity extends Activity {
         showTab(Math.max(0,Math.min(TABS.length-1,requested)));
         for(int i=0;i<8;i++){
             final int index=i;
-            PlanetPhotos.load(this,index,bmp->{if(bmp!=null){SkyWidgets.refreshSolar(this);if(planetView!=null)planetView.invalidate();}});
+            PlanetPhotos.load(this,index,bmp->{
+                if(bmp!=null){
+                    SkyWidgets.refreshSolar(this);
+                    if(explorer!=null)explorer.updatePhotos();
+                }
+            });
         }
         MoonPhoto.load(this,bmp->{});
     }
@@ -110,6 +118,14 @@ public final class MainActivity extends Activity {
             }
         }
         showTab(tab);
+    }
+    @Override protected void onResume(){
+        super.onResume();
+        if(explorer!=null)explorer.resume();
+    }
+    @Override protected void onPause(){
+        if(explorer!=null)explorer.pause();
+        super.onPause();
     }
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private GradientDrawable background(int color,int radius){
@@ -172,6 +188,7 @@ public final class MainActivity extends Activity {
             item.setContentDescription(new String[]{"태양계","관측","달","천문 이벤트","우주 도감"}[i]);
             item.setOnClickListener(v->showTab(target));
         }
+        if(explorer!=null){explorer.pause();explorer=null;}
         page.removeAllViews();
         switch(tab){
             case 0:showSolar();break;
@@ -180,6 +197,7 @@ public final class MainActivity extends Activity {
             case 3:showEvents();break;
             default:showCatalog();break;
         }
+        if(pageScroll!=null)pageScroll.post(()->pageScroll.scrollTo(0,0));
     }
     private void shiftMonth(int month){
         Calendar c=Calendar.getInstance();c.setTimeInMillis(solarTime);c.add(Calendar.MONTH,month);
@@ -194,12 +212,15 @@ public final class MainActivity extends Activity {
         paragraph(main,"태양 중심 · J2000 황도 좌표 · JPL 1800~2050 근사식. 행성은 실제 계산 좌표를 사용하고 크기만 알아보기 쉽게 키웠어.");
         TextView date=text(new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(solarTime)),16,TEXT,true);
         main.addView(date);
-        planetView=new PlanetView(this);
-        main.addView(planetView,new LinearLayout.LayoutParams(-1,dp(360)));
-        paragraph(main,"드래그로 시점 회전 · 두 손가락으로 확대/축소. 실제 내행성 위치를 자세히 보려면 아래 ‘내행성 확대’를 눌러봐.");
+        explorer=new SolarExplorer(this,idx->planetDialog(idx));
+        explorer.setTime(solarTime);
+        main.addView(explorer,new LinearLayout.LayoutParams(-1,dp(390)));
+        explorer.resume();
+        paragraph(main,"GPU 3D 궤도 · 행성을 직접 누르면 사진과 상세 정보가 열려. 한 손가락으로 시점 회전, 두 손가락으로 확대해 봐.");
         LinearLayout focus=row(main);
-        button(focus,"전체 태양계",()->{planetView.zoom=1;planetView.invalidate();});
-        button(focus,"내행성 확대",()->{planetView.zoom=14;planetView.invalidate();});
+        button(focus,"전체 궤도",()->explorer.showWholeSystem());
+        button(focus,"내행성",()->explorer.showInnerSystem());
+        button(focus,"외행성",()->explorer.showOuterSystem());
         LinearLayout controls=row(main);
         button(controls,"◀ 한 달",()->shiftMonth(-1));
         button(controls,"현재 시각",()->{solarTime=System.currentTimeMillis();showTab(0);});
@@ -557,33 +578,6 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private final class PlanetView extends View {
-        double yaw=-.38,tilt=.42,zoom=1;float lastX,lastY;
-        private final ScaleGestureDetector detector;
-        PlanetView(Context context){
-            super(context);setLayerType(View.LAYER_TYPE_SOFTWARE,null);
-            detector=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
-                @Override public boolean onScale(ScaleGestureDetector d){
-                    zoom=Math.max(.3,Math.min(24,zoom*d.getScaleFactor()));invalidate();return true;
-                }
-            });
-        }
-        @Override protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            SolarPainter.draw(MainActivity.this,canvas,getWidth(),getHeight(),solarTime,compressed,true,yaw,tilt,zoom);
-        }
-        @Override public boolean onTouchEvent(android.view.MotionEvent e){
-            detector.onTouchEvent(e);
-            if(e.getActionMasked()==MotionEvent.ACTION_DOWN){lastX=e.getX();lastY=e.getY();return true;}
-            if(e.getActionMasked()==MotionEvent.ACTION_MOVE&&e.getPointerCount()==1&&!detector.isInProgress()){
-                yaw+=(e.getX()-lastX)*.008;
-                tilt=Math.max(-1.3,Math.min(1.3,tilt+(e.getY()-lastY)*.007));
-                invalidate();
-            }
-            lastX=e.getX();lastY=e.getY();
-            return true;
-        }
-    }
     private final class MoonView extends View {
         final long time;
         MoonView(Context c,long t){super(c);time=t;}
