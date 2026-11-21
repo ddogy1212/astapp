@@ -72,7 +72,7 @@ def fetch(item):
             url=f"https://images-assets.nasa.gov/image/{nasa_id}/{nasa_id}~thumb.jpg"
             try:
                 jpeg=get(url,2100000)
-                if jpeg.startswith(b"\\xff\\xd8\\xff"):
+                if jpeg.startswith(b"\xff\xd8\xff"):
                     filepath.write_bytes(jpeg)
                     meta={"nasa_id":nasa_id,"title":title,"center":"NASA",
                           "credit":"NASA / archival science data",
