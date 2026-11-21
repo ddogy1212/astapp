@@ -29,6 +29,11 @@ public final class MoonPhoto {
         if(memory!=null && !memory.isRecycled())return memory;
         File f=new File(ctx.getCacheDir(),"nasa_lunar_full_disk.jpg");
         if(f.isFile())memory=BitmapFactory.decodeFile(f.getAbsolutePath());
+        if(memory==null)try(InputStream in=ctx.getAssets().open("nasa/moon.jpg")){
+            BitmapFactory.Options op=new BitmapFactory.Options();
+            op.inPreferredConfig=Bitmap.Config.RGB_565;
+            memory=BitmapFactory.decodeStream(in,null,op);
+        }catch(IOException ignored){}
         return memory;
     }
     public static void load(Context context,Callback callback){
