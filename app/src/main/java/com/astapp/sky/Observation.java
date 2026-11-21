@@ -22,6 +22,19 @@ public final class Observation {
         double az=Math.atan2(-Math.sin(hour),Math.tan(dec)*Math.cos(latitude)-Math.sin(latitude)*Math.cos(hour));
         return new Coord(Math.toDegrees(alt),(Math.toDegrees(az)+360)%360);
     }
+    /** Right ascension and declination in J2000 degrees (precession not applied). */
+    public static Coord forRaDec(double raDegrees,double decDegrees,long time,double lat,double lon){
+        double jd=Ephemeris.julian(time),t=(jd-2451545.0)/36525.0;
+        double gmst=280.46061837+360.98564736629*(jd-2451545.0)+
+            0.000387933*t*t-t*t*t/38710000.0;
+        double hour=Math.toRadians(gmst+lon-raDegrees);
+        double phi=Math.toRadians(lat),dec=Math.toRadians(decDegrees);
+        double elevation=Math.asin(Math.sin(phi)*Math.sin(dec)+
+            Math.cos(phi)*Math.cos(dec)*Math.cos(hour));
+        double bearing=Math.atan2(-Math.sin(hour),
+            Math.tan(dec)*Math.cos(phi)-Math.sin(phi)*Math.cos(hour));
+        return new Coord(Math.toDegrees(elevation),(Math.toDegrees(bearing)+360)%360);
+    }
     public static Coord planet(int i,long date,double lat,double lon) {
         double[] target=Ephemeris.position(i,date),earth=Ephemeris.position(2,date);
         return horizontal(new double[]{target[0]-earth[0],target[1]-earth[1],target[2]-earth[2]},date,lat,lon);
