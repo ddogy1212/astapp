@@ -46,6 +46,11 @@ public final class PlanetPhotos {
             BitmapFactory.Options op=new BitmapFactory.Options();op.inSampleSize=1;
             HOT[index]=BitmapFactory.decodeFile(f.getAbsolutePath(),op);
         }
+        if(HOT[index]==null)try(InputStream in=c.getAssets().open("nasa/planet_"+index+".jpg")){
+            BitmapFactory.Options op=new BitmapFactory.Options();
+            op.inPreferredConfig=Bitmap.Config.RGB_565;
+            HOT[index]=BitmapFactory.decodeStream(in,null,op);
+        }catch(IOException ignored){}
         return HOT[index];
     }
     public static void load(Context c,int index,Listener listener){
