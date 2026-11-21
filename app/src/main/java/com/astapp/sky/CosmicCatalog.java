@@ -37,7 +37,20 @@ public final class CosmicCatalog {
         new Object("장미 성운","Rosette Nebula","방출 성운","중심의 젊은 별들이 주변 가스를 밝히는 넓은 별 형성 영역.","Rosette Nebula NGC 2237",NASA),
         new Object("베텔게우스","Betelgeuse","적색초거성","오리온자리의 밝은 적색초거성. 밝기가 변하는 변광성이다.","Betelgeuse star",NASA),
         new Object("프록시마 센타우리","Proxima Centauri","적색왜성","태양에 가장 가까운 것으로 알려진 별. 센타우루스자리 방향에 있다.","Proxima Centauri star",NASA),
-        new Object("타란툴라 성운","Tarantula Nebula","별 탄생 성운","대마젤란은하 속의 강력한 별 형성 지역.","Tarantula Nebula 30 Doradus",NASA)
+        new Object("타란툴라 성운","Tarantula Nebula","별 탄생 성운","대마젤란은하 속의 강력한 별 형성 지역.","Tarantula Nebula 30 Doradus",NASA),
+        new Object("수성","Mercury","행성 · 암석형","태양에 가장 가까운 행성. 짧은 88일 공전 주기와 수많은 충돌구가 특징.","Mercury planet MESSENGER","https://science.nasa.gov/mercury/"),
+        new Object("금성","Venus","행성 · 암석형","두꺼운 이산화탄소 대기와 강한 온실효과로 표면이 매우 뜨거워.","Venus planet NASA","https://science.nasa.gov/venus/"),
+        new Object("지구","Earth","행성 · 암석형","액체 상태의 물과 생명체가 확인된 우리의 행성이야.","Earth blue marble NASA","https://science.nasa.gov/earth/"),
+        new Object("화성","Mars","행성 · 암석형","붉은 산화철 먼지와 과거 액체 물의 흔적이 있어.","Mars planet NASA","https://science.nasa.gov/mars/"),
+        new Object("목성","Jupiter","행성 · 가스 거대","태양계에서 가장 크며 대적점 같은 거대한 폭풍을 지녀.","Jupiter planet NASA","https://science.nasa.gov/jupiter/"),
+        new Object("토성","Saturn","행성 · 가스 거대","얼음 입자와 암석 조각으로 구성된 광대한 고리가 특징이야.","Saturn rings Cassini NASA","https://science.nasa.gov/saturn/"),
+        new Object("천왕성","Uranus","행성 · 얼음 거대","자전축이 크게 기울어진 푸른빛 얼음 거대행성이야.","Uranus Voyager 2 NASA","https://science.nasa.gov/uranus/"),
+        new Object("해왕성","Neptune","행성 · 얼음 거대","강풍과 메탄이 특징적인 가장 바깥쪽의 공식 행성이야.","Neptune Voyager 2 NASA","https://science.nasa.gov/neptune/"),
+        new Object("달","Moon","위성 · 지구","지구와 함께 진화해 온 자연위성. 충돌구와 달의 바다가 남아 있어.","Moon full disk NASA","https://science.nasa.gov/moon/"),
+        new Object("명왕성","Pluto","왜행성","카이퍼 벨트의 왜행성. 뉴허라이즌스 탐사선이 2015년 근접 촬영했어.","Pluto New Horizons 2015","https://science.nasa.gov/dwarf-planets/pluto/"),
+        new Object("유로파","Europa","위성 · 목성","목성의 얼음 위성으로, 얼음 껍질 아래 바다가 있을 것으로 연구돼.","Europa moon Galileo spacecraft","https://science.nasa.gov/jupiter/moons/europa/"),
+        new Object("타이탄","Titan","위성 · 토성","두꺼운 대기와 액체 메탄·에탄 호수로 유명한 토성의 위성이야.","Titan moon Cassini Huygens","https://science.nasa.gov/saturn/moons/titan/"),
+        new Object("엔셀라두스","Enceladus","위성 · 토성","남극 부근에서 얼음과 수증기 분출이 관측된 토성의 위성이야.","Enceladus moon Cassini geyser","https://science.nasa.gov/saturn/moons/enceladus/")
     };
     public static int daily(Context c,int widgetId) {
         long day=java.time.LocalDate.now().toEpochDay();
