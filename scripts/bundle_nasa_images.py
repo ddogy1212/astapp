@@ -49,7 +49,14 @@ PREFERRED={
     "planet_4":("PIA04866","Jupiter Cassini true-color spacecraft mosaic"),
     "planet_5":("PIA01969","Saturn Voyager 2 archival rings photograph"),
     "planet_7":("PIA01492","Neptune Voyager 2 full-disk image"),
-    "moon":("GSFC_20171208_Archive_e001982","NASA Clementine full Moon observation composite")
+    "moon":("GSFC_20171208_Archive_e001982","NASA Clementine full Moon observation composite"),
+    "cosmic_0":("PIA08653","Orion Nebula · Spitzer infrared observation"),
+    "cosmic_1":("PIA26276","Andromeda Galaxy · Spitzer infrared observation"),
+    "cosmic_2":("PIA08260","Pleiades star cluster · NASA observation"),
+    "cosmic_3":("PIA21474","Crab Nebula · multi-observatory observation composite"),
+    "cosmic_4":("PIA25433","Eagle Nebula · WISE infrared observation"),
+    "cosmic_5":("PIA14443","Ring Nebula · NASA observation"),
+    "cosmic_7":("PIA10200","Whirlpool Galaxy · NASA observation")
 }
 NO_ART=re.compile(r"artist|illustrat|simulation|computer.?generat|animation|diagram|infographic|painting|concept|render|graphic|movie poster",re.I)
 USER_AGENT={"User-Agent":"ASTAPP/0.4 educational research (NASA imagery credit preserved)"}
