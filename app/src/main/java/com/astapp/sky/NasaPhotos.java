@@ -44,9 +44,9 @@ public final class NasaPhotos {
                     JSONArray data=item.optJSONArray("data");
                     JSONArray links=item.optJSONArray("links");
                     if(data==null||data.length()==0||links==null||links.length()==0)continue;
-                    JSONObject meta=data.getJSONObject(0);
-                    String title=meta.optString("title","").toLowerCase(java.util.Locale.ROOT);
-                    String desc=meta.optString("description","").toLowerCase(java.util.Locale.ROOT);
+                    JSONObject targetMetadata=data.getJSONObject(0);
+                    String title=targetMetadata.optString("title","").toLowerCase(java.util.Locale.ROOT);
+                    String desc=targetMetadata.optString("description","").toLowerCase(java.util.Locale.ROOT);
                     String label=o.english.toLowerCase(java.util.Locale.ROOT);
                     String queryLabel=o.query.toLowerCase(java.util.Locale.ROOT);
                     String mainTerm=queryLabel.split(" ")[0];
