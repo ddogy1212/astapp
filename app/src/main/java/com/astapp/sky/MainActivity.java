@@ -501,6 +501,7 @@ public final class MainActivity extends Activity {
         Bitmap bitmap=SolarBodyFacts.isPlanet(index)?
             PlanetPhotos.cached(this,SolarBodyFacts.planetIndex(index)):
             SolarBodyFacts.isMoon(index)?MoonPhoto.cached(this):NasaPhotos.cached(this,obj);
+        if(bitmap==null)bitmap=NasaPhotos.cached(this,obj);
         if(bitmap!=null){
             image.setImageBitmap(bitmap);
             photoCaption.setText("NASA 아카이브 관측 사진 · 촬영 시각은 현재와 다름");
