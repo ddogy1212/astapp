@@ -29,6 +29,7 @@ public final class SkyWidgets {
     }
     private static PendingIntent open(Context c,int id,int tab){
         Intent it=new Intent(c,MainActivity.class).putExtra("tab",tab);
+        if(tab==4)it.putExtra("catalog_index",CosmicCatalog.daily(c,id));
         it.setData(Uri.parse("astapp://open/"+tab+"/"+id));
         return PendingIntent.getActivity(c,id*13+tab,it,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
@@ -98,14 +99,14 @@ public final class SkyWidgets {
         canvas.drawColor(0xff101D35);canvas.drawRect(0,0,w,h,p);p.setShader(null);
         Random rand=new Random(obj.name.hashCode());
         for(int i=0;i<180;i++){
-            p.setColor(i%7==0?0xffAFC7F2:0xff587BAC);
+            p.setColor(i%7==0?0xffC4C4C4:0xff6A6A6A);
             canvas.drawCircle(rand.nextInt(w),rand.nextInt(h),rand.nextInt(7)==0?1.4f:.7f,p);
         }
-        p.setColor(0xffF4D2A8);p.setTypeface(Typeface.create("sans-serif-medium",0));
+        p.setColor(0xffF3F3F3);p.setTypeface(Typeface.create("sans-serif-medium",0));
         p.setTextSize(Math.max(18,w/22f));
         canvas.drawText("✦ "+obj.english,18,h*.51f,p);
-        p.setTextSize(Math.max(12,w/43f));p.setColor(0xffC9D8EC);
-        canvas.drawText("일러스트 배경 · NASA 사진 다운로드 전",18,h*.63f,p);
+        p.setTextSize(Math.max(12,w/43f));p.setColor(0xffAAAAAA);
+        canvas.drawText("관측 사진 확인 중",18,h*.63f,p);
         return out;
     }
     private static void discover(Context c,int id,int size,Class<?> klass,boolean fetch){
@@ -114,23 +115,47 @@ public final class SkyWidgets {
         CosmicCatalog.Object o=CosmicCatalog.ALL[index];
         boolean small=size==0;
         RemoteViews rv=new RemoteViews(c.getPackageName(),small?R.layout.widget_discovery_small:R.layout.widget_discovery);
-        rv.setTextViewText(R.id.discover_title,"✦ 오늘의 우주");
+        rv.setTextViewText(R.id.discover_title,"AST / DISCOVERY");
         rv.setTextViewText(R.id.discover_name,o.name+" · "+o.english);
         rv.setTextViewText(R.id.discover_kind,o.kind);
         rv.setOnClickPendingIntent(R.id.discover_next,broadcast(c,klass,DISC_NEXT,id,4));
         rv.setOnClickPendingIntent(R.id.discover_root,open(c,id,4));
         if(!small){
             int w=size==3?650:size==2?640:330,h=size==3?440:190;
-            Bitmap cached=NasaPhotos.cached(c,o);
+            Bitmap cached=SolarBodyFacts.isPlanet(index)?
+                PlanetPhotos.cached(c,SolarBodyFacts.planetIndex(index)):
+                SolarBodyFacts.isMoon(index)?MoonPhoto.cached(c):NasaPhotos.cached(c,o);
             rv.setImageViewBitmap(R.id.discover_image,cached==null?fallback(w,h,o):cached);
             rv.setOnClickPendingIntent(R.id.discover_image,open(c,id,4));
             rv.setTextViewText(R.id.discover_fact,o.fact);
-            rv.setTextViewText(R.id.discover_attribution,cached==null?"이미지: 개별 NASA 자료 검색 중":"이미지: NASA Images API · 원본 크레딧 확인");
+            rv.setTextViewText(R.id.discover_attribution,cached==null?
+                "NASA 관측 이미지 확인 중":"NASA 아카이브 · 촬영 당시 사진");
             rv.setTextViewText(R.id.discover_fav,CosmicCatalog.favorite(c,o.english)?"★":"☆");
             rv.setOnClickPendingIntent(R.id.discover_fav,broadcast(c,klass,DISC_FAV,id,5));
-            if(fetch && cached==null)NasaPhotos.load(c,o,(b,credit)->{
-                if(b!=null && CosmicCatalog.daily(c,id)==index)discover(c,id,size,klass,false);
-            });
+            if(fetch&&cached==null){
+                if(SolarBodyFacts.isPlanet(index)){
+                    PlanetPhotos.load(c,SolarBodyFacts.planetIndex(index),photo->{
+                        if(CosmicCatalog.daily(c,id)!=index)return;
+                        if(photo!=null)discover(c,id,size,klass,false);
+                        else NasaPhotos.load(c,o,(b,credit)->{
+                            if(b!=null&&CosmicCatalog.daily(c,id)==index)
+                                discover(c,id,size,klass,false);
+                        });
+                    });
+                }else if(SolarBodyFacts.isMoon(index)){
+                    MoonPhoto.load(c,photo->{
+                        if(CosmicCatalog.daily(c,id)!=index)return;
+                        if(photo!=null)discover(c,id,size,klass,false);
+                        else NasaPhotos.load(c,o,(b,credit)->{
+                            if(b!=null&&CosmicCatalog.daily(c,id)==index)
+                                discover(c,id,size,klass,false);
+                        });
+                    });
+                }else NasaPhotos.load(c,o,(b,credit)->{
+                    if(b!=null&&CosmicCatalog.daily(c,id)==index)
+                        discover(c,id,size,klass,false);
+                });
+            }
         }
         mgr.updateAppWidget(id,rv);
     }
