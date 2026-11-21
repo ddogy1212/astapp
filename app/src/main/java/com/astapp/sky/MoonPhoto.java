@@ -58,6 +58,44 @@ public final class MoonPhoto {
                     bmp.compress(Bitmap.CompressFormat.JPEG,88,out);
                 }
             }catch(Exception ignored){}
+            if(bmp==null){
+                // Fall back to the official NASA Image Library if a static archive URL moved.
+                try{
+                    String q=java.net.URLEncoder.encode("Moon full disk LRO","UTF-8");
+                    org.json.JSONObject root=NasaPhotos.jsonUrl(
+                        "https://images-api.nasa.gov/search?q="+q+"&media_type=image&page_size=35");
+                    org.json.JSONArray items=root.getJSONObject("collection").getJSONArray("items");
+                    for(int i=0;i<items.length();i++){
+                        org.json.JSONObject item=items.getJSONObject(i);
+                        org.json.JSONArray data=item.optJSONArray("data"), links=item.optJSONArray("links");
+                        if(data==null||data.length()==0||links==null||links.length()==0)continue;
+                        String title=data.getJSONObject(0).optString("title","").toLowerCase(java.util.Locale.ROOT);
+                        if(!title.contains("moon")&&!title.contains("lunar"))continue;
+                        if(title.matches(".*(artist|illustrat|animation|model|artwork|concept|diagram).*"))continue;
+                        String href=links.getJSONObject(0).optString("href","");
+                        if(!href.startsWith("https://"))continue;
+                        URL u=new URL(href);
+                        if(!u.getHost().endsWith(".nasa.gov"))continue;
+                        HttpURLConnection con=(HttpURLConnection)u.openConnection();
+                        con.setConnectTimeout(8500);con.setReadTimeout(12000);
+                        try{
+                            if(con.getResponseCode()==200){
+                                BitmapFactory.Options opts=new BitmapFactory.Options();
+                                opts.inSampleSize=2;
+                                opts.inPreferredConfig=Bitmap.Config.RGB_565;
+                                try(InputStream in=con.getInputStream()){
+                                    bmp=BitmapFactory.decodeStream(in,null,opts);
+                                }
+                            }
+                        }finally{con.disconnect();}
+                        if(bmp!=null)break;
+                    }
+                    if(bmp!=null)try(FileOutputStream out=new FileOutputStream(
+                        new File(app.getCacheDir(),"nasa_lunar_full_disk.jpg"))){
+                        bmp.compress(Bitmap.CompressFormat.JPEG,88,out);
+                    }
+                }catch(Exception ignored){}
+            }
             java.util.List<Callback> callbacks;
             synchronized(MoonPhoto.class){
                 memory=bmp;fetching=false;
