@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/discover_root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="horizontal" android:background="#0A1931" android:padding="8dp"
+    android:orientation="horizontal" android:background="#111111" android:padding="8dp"
     android:gravity="center_vertical">
     <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical">
-        <TextView android:id="@+id/discover_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#BBD2F8" android:textSize="10sp"/>
+        <TextView android:id="@+id/discover_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#BEBEBE" android:textSize="10sp"/>
         <TextView android:id="@+id/discover_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textStyle="bold" android:ellipsize="end" android:maxLines="1" android:textSize="12sp"/>
-        <TextView android:id="@+id/discover_kind" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#9CBAE0" android:textSize="9sp"/>
+        <TextView android:id="@+id/discover_kind" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#B7B7B7" android:textSize="9sp"/>
     </LinearLayout>
-    <TextView android:id="@+id/discover_next" android:layout_width="42dp" android:layout_height="match_parent" android:gravity="center" android:text="↻" android:textSize="22sp" android:textColor="#FFFFFF" android:background="#203451"/>
+    <TextView android:id="@+id/discover_next" android:layout_width="42dp" android:layout_height="match_parent" android:gravity="center" android:text="↻" android:textSize="22sp" android:textColor="#FFFFFF" android:background="#303030"/>
 </LinearLayout>
