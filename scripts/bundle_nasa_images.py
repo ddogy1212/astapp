@@ -80,8 +80,15 @@ def fetch(item):
             url="https://science.nasa.gov/wp-content/uploads/2023/04/m13-xlarge_web-jpg.webp"
             try:
                 blob=get(url,2100000)
+                extension=None
                 if blob[:4]==b"RIFF" and blob[8:12]==b"WEBP":
-                    (OUTPUT/"cosmic_6.webp").write_bytes(blob)
+                    extension="webp"
+                elif blob[:3]==bytes([255,216,255]):
+                    extension="jpg"
+                elif blob[:8]==bytes([137,80,78,71,13,10,26,10]):
+                    extension="png"
+                if extension:
+                    (OUTPUT/("cosmic_6."+extension)).write_bytes(blob)
                     meta={"nasa_id":"",
                           "title":"Messier 13 · Hubble globular cluster observation",
                           "center":"NASA / ESA",
@@ -89,6 +96,7 @@ def fetch(item):
                           "details":"https://science.nasa.gov/image-detail/m13-xlarge_web/",
                           "size":len(blob)}
                     return (stem,meta,None)
+                print("M13 unexpected media header",repr(blob[:22]),flush=True)
             except Exception as ex:
                 print("M13 NASA Hubble photo unavailable",str(ex)[:100],flush=True)
         if stem in PREFERRED:
