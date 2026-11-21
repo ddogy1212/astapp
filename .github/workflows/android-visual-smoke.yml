@@ -1,0 +1,78 @@
+name: Android UI smoke screenshots
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/android-visual-smoke.yml
+  workflow_dispatch:
+
+jobs:
+  emulator-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Enable emulator acceleration if available
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+      - name: Install Android SDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Include NASA photo assets
+        run: python3 scripts/bundle_nasa_images.py
+      - name: Build APK
+        run: gradle :app:assembleDebug :app:testDebugUnitTest --stacktrace
+      - name: Run app on Pixel emulator and save screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb shell wm size 1080x2400
+            adb shell wm density 420
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            adb shell am start -n com.astapp.sky/.MainActivity
+            sleep 12
+            mkdir -p screenshots
+            adb shell screencap -p /sdcard/ast-home.png
+            adb pull /sdcard/ast-home.png screenshots/01-home.png
+            adb shell uiautomator dump /sdcard/ast-home.xml || true
+            adb pull /sdcard/ast-home.xml screenshots/01-home.xml || true
+            adb shell input tap 963 2220
+            sleep 4
+            adb shell screencap -p /sdcard/ast-catalog.png
+            adb pull /sdcard/ast-catalog.png screenshots/02-catalog.png
+            adb shell uiautomator dump /sdcard/ast-catalog.xml || true
+            adb pull /sdcard/ast-catalog.xml screenshots/02-catalog.xml || true
+            adb shell input tap 350 2220
+            sleep 4
+            adb shell screencap -p /sdcard/ast-observe.png
+            adb pull /sdcard/ast-observe.png screenshots/03-observe.png
+            adb logcat -d -t 2500 > screenshots/logcat.txt
+            if grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL' screenshots/logcat.txt; then
+              echo "Detected app crash in smoke screenshots" >&2
+              exit 1
+            fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ASTAPP-pixel-ui-screenshots
+          path: screenshots/
+          if-no-files-found: warn
