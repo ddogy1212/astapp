@@ -41,6 +41,7 @@ public final class SolarExplorer extends FrameLayout {
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         labels=new Labels(context);
+        renderer.labelOverlay=labels;
         addView(surface,new LayoutParams(-1,-1));
         addView(labels,new LayoutParams(-1,-1));
         scale=new android.view.ScaleGestureDetector(context,new android.view.ScaleGestureDetector.SimpleOnScaleGestureListener(){
@@ -54,9 +55,9 @@ public final class SolarExplorer extends FrameLayout {
         renderer.setTime(System.currentTimeMillis());
     }
     public void setTime(long millis){renderer.setTime(millis);refresh();}
-    public void showWholeSystem(){renderer.focus=-1;renderer.extent=35;refresh();}
-    public void showInnerSystem(){renderer.focus=-1;renderer.extent=2.3f;refresh();}
-    public void showOuterSystem(){renderer.focus=-1;renderer.extent=35;refresh();}
+    public void showWholeSystem(){renderer.focus=-1;renderer.mode=0;renderer.extent=35;refresh();}
+    public void showInnerSystem(){renderer.focus=-1;renderer.mode=1;renderer.extent=2.3f;refresh();}
+    public void showOuterSystem(){renderer.focus=-1;renderer.mode=2;renderer.extent=35;refresh();}
     public void focus(int index){
         renderer.focus=index;
         renderer.extent=index<=3?.52f:1.6f;
@@ -144,7 +145,9 @@ public final class SolarExplorer extends FrameLayout {
     }
     private static final class Scene implements GLSurfaceView.Renderer {
         final Context app;
-        volatile float extent=35f,yaw=.46f,tilt=.42f;
+        volatile float extent=2.3f,yaw=.46f,tilt=.42f;
+        volatile int mode=1; // 0 all / 1 rocky planets / 2 outer planets.
+        volatile View labelOverlay;
         volatile long time=System.currentTimeMillis();
         volatile int focus=-1;
         volatile float[][] screen;
@@ -232,6 +235,7 @@ public final class SolarExplorer extends FrameLayout {
             GLES20.glUniformMatrix4fv(uMatrix,1,false,vp,0);
             // Actual orbital 3D eccentricity and inclination are retained.
             for(int i=7;i>=0;i--){
+                if(mode==1&&i>3||mode==2&&i<4)continue;
                 float[] orbit=new float[(161)*3];
                 for(int k=0;k<=160;k++){
                     double[] p=Ephemeris.orbitPoint(i,time,Math.PI*2*k/160);
@@ -249,6 +253,7 @@ public final class SolarExplorer extends FrameLayout {
             syncTextures();
             float[][] positions=new float[8][];
             for(int i=7;i>=0;i--){
+                if(mode==1&&i>3||mode==2&&i<4)continue;
                 double[] p=Ephemeris.position(i,time);
                 float[] xyz={(float)p[0],(float)p[1],(float)p[2]};
                 float[] clip={0,0,0,0};
@@ -271,6 +276,8 @@ public final class SolarExplorer extends FrameLayout {
                 }
             }
             screen=positions;
+            View overlay=labelOverlay;
+            if(overlay!=null)overlay.postInvalidate();
         }
         private void draw(int mode,float[] coords,int count,int style,float size){
             FloatBuffer buffer=ByteBuffer.allocateDirect(coords.length*4)
