@@ -166,17 +166,68 @@ public final class MainActivity extends Activity {
         line(widgetCard,"홈 화면 위젯 3종","2×2 / 4×2 / 4×4 · 내행성/외행성 실제 축척 분리");
         paragraph(widgetCard,"갤럭시 홈 화면을 길게 누르기 → 위젯 → ASTAPP → 원하는 크기 추가. 위젯에서 ◀ / 지금 / ▶ 버튼으로 시각 변경.");
     }
+
     private void planetDialog(int i){
         double[] p=Ephemeris.position(i,solarTime);
-        String body="태양 기준 거리: "+Ephemeris.au(p)+"\nJ2000 황도 좌표 (AU)\nX "+fmt(p[0])+"\nY "+fmt(p[1])+"\nZ "+fmt(p[2]);
+        double[] earth=Ephemeris.position(2,solarTime);
+        double[] difference={p[0]-earth[0],p[1]-earth[1],p[2]-earth[2]};
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout wrap=new LinearLayout(this);wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(dp(22),dp(10),dp(22),dp(12));scroll.addView(wrap);
+        ImageView picture=new ImageView(this);
+        picture.setBackground(background(0xff14273D,16));
+        picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        wrap.addView(picture,new LinearLayout.LayoutParams(-1,dp(190)));
+        Bitmap cached=PlanetPhotos.cached(this,i);
+        if(cached!=null)picture.setImageBitmap(cached);
+        else PlanetPhotos.load(this,i,photo->{if(photo!=null)picture.setImageBitmap(photo);});
+        wrap.addView(text(Ephemeris.NAME[i]+"  ·  "+Ephemeris.ENGLISH[i],22,TEXT,true));
+        TextView credit=text("NASA 과거 관측 사진 · "+PlanetFacts.PHOTO_NOTE[i]+" · 현재 모습 아님",11,MUTED,false);
+        wrap.addView(credit);
+        TextView description=text(PlanetFacts.SUMMARY[i],14,TEXT,false);
+        description.setPadding(0,dp(14),0,dp(16));wrap.addView(description);
+        wrap.addView(text("태양까지 거리: "+Ephemeris.au(p),15,BLUE,true));
+        wrap.addView(text("지구까지 거리(근사): "+Ephemeris.au(difference),15,BLUE,true));
+        TextView xyz=text("J2000 황도 좌표 (AU):  X "+fmt(p[0])+"  Y "+fmt(p[1])+"  Z "+fmt(p[2]),12,MUTED,false);
+        xyz.setPadding(0,dp(10),0,dp(10));wrap.addView(xyz);
         if(i!=2){
-            Observation.Coord c=Observation.planet(i,solarTime,observerLat,observerLon);
-            body+="\n\n"+site+" 관측 방향(근사)\n고도 "+fmt(c.altitude)+"° · 방위각 "+fmt(c.azimuth)+"°";
+            Observation.Coord obs=Observation.planet(i,solarTime,observerLat,observerLon);
+            wrap.addView(text(site+" 기준 고도 "+fmt(obs.altitude)+"° · 방위각 "+fmt(obs.azimuth)+"°",13,TEXT,false));
         }
-        new AlertDialog.Builder(this).setTitle(Ephemeris.NAME[i]+" · "+Ephemeris.ENGLISH[i]).setMessage(body)
+        new AlertDialog.Builder(this).setView(scroll)
+            .setNeutralButton("NASA 천체 정보",(d,which)->openWebsite(PlanetFacts.URL[i]))
             .setPositiveButton("닫기",null).show();
     }
+    private void openWebsite(String url){
+        try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
+        catch(Exception e){Toast.makeText(this,"웹페이지를 열 수 없습니다",Toast.LENGTH_LONG).show();}
+    }
     private String fmt(double d){return String.format(Locale.KOREA,"%.2f",d);}
+    private void useGps(){
+        if(!LocationAccess.permitted(this)){LocationAccess.request(this);return;}
+        Toast.makeText(this,"현재 위치 확인 중…",Toast.LENGTH_SHORT).show();
+        LocationAccess.current(this,(location,error)->{
+            if(location==null){
+                Toast.makeText(this,error==null?"위치를 찾지 못했어요":error,Toast.LENGTH_LONG).show();
+                return;
+            }
+            observerLat=location.getLatitude();observerLon=location.getLongitude();
+            site="내 현재 위치 (기기 위치 센서)";
+            getSharedPreferences("ast",0).edit()
+                .putLong("lat",Double.doubleToRawLongBits(observerLat))
+                .putLong("lon",Double.doubleToRawLongBits(observerLon))
+                .putString("site",site).apply();
+            showTab(1);
+        });
+    }
+    @Override public void onRequestPermissionsResult(int code,String[] perms,int[] grants){
+        super.onRequestPermissionsResult(code,perms,grants);
+        if(code==LocationAccess.REQ){
+            if(LocationAccess.permitted(this))useGps();
+            else Toast.makeText(this,"위치 권한 없이도 지역을 직접 설정할 수 있어요",Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void selectSite(){
         LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setPadding(dp(24),dp(8),dp(24),dp(8));
         EditText name=new EditText(this);name.setSingleLine(true);name.setText(site);name.setHint("장소 표시 이름");
@@ -196,42 +247,78 @@ public final class MainActivity extends Activity {
                 }catch(Exception ex){Toast.makeText(this,"위도 -90~90, 경도 -180~180을 입력하세요",Toast.LENGTH_LONG).show();}
             }).setNegativeButton("취소",null).show();
     }
+
     private void showObservation(){
-        header("🔭 다음 밤 관측 후보");
+        header("🔭 오늘 밤, 내 위치에서");
         long night=Observation.nextNightAtNine();
         Observation.Coord sun=Observation.sun(night,observerLat,observerLon);
         LinearLayout controls=card();
-        line(controls,"관측 기준 위치",site+" ("+fmt(observerLat)+"°, "+fmt(observerLon)+"°)");
-        line(controls,"평가 기준 시각",new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(night)));
-        LinearLayout r=row(controls);button(r,"장소 바꾸기",this::selectSite);
-        paragraph(controls,"현재 GPS 위치는 사용하지 않습니다. 21시의 천체 고도만 우선 평가하며 날씨·지형·광공해는 이 버전의 점수에 포함되지 않습니다.");
-        if(sun.altitude>-12)paragraph(controls,"⚠ 해당 시각 태양 고도가 "+fmt(sun.altitude)+"°로 하늘이 충분히 어둡지 않을 수 있습니다.");
+        line(controls,"관측 위치",site);
+        paragraph(controls,"위도 "+fmt(observerLat)+"° · 경도 "+fmt(observerLon)+"°  |  위치 정보는 기기에 저장");
+        line(controls,"예측 시각",new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(night)));
+        LinearLayout r=row(controls);
+        button(r,"📍 실제 GPS 위치",this::useGps);
+        button(r,"✎ 직접 입력",this::selectSite);
+        paragraph(controls,"GPS는 버튼을 눌렀을 때만 요청하고 백그라운드 위치 추적을 하지 않아. 아래 구름량을 확인할 때만 선택한 좌표가 Open-Meteo로 전달돼.");
+        TextView clouds=text("☁ 내 지역의 실제 구름 예보 확인 중…",14,BLUE,true);
+        clouds.setPadding(0,dp(8),0,dp(12));controls.addView(clouds);
+        final double lat=observerLat,lon=observerLon;
+        WeatherForecast.load(lat,lon,night,(coverage,timestamp,error)->{
+            if(activeTab!=1||lat!=observerLat||lon!=observerLon)return;
+            if(coverage==null)clouds.setText("☁ 날씨 자료 없음 · "+error);
+            else clouds.setText("☁ "+timestamp+" 현지 구름량 "+coverage+"%  · Open-Meteo 예보");
+        });
+        if(sun.altitude>-12)paragraph(controls,"⚠ 이 시각 태양 고도 "+fmt(sun.altitude)+"°. 충분히 어둡지 않을 수 있어.");
         List<Observation.Target> list=Observation.sorted(night,observerLat,observerLon);
         int count=0;
         for(Observation.Target t:list){
             LinearLayout c=card();
-            String title=(++count)+"위 · "+Ephemeris.NAME[t.index];
-            line(c,title,fmt(t.coord.altitude)+"° · "+Observation.azimuthText(t.coord.azimuth)+" ("+fmt(t.coord.azimuth)+"°)");
-            paragraph(c,t.coord.altitude<0?"지평선 아래 — 이 시각에는 관측 불가":
-                    t.coord.altitude<15?"낮은 고도 — 건물·대기 영향 큼":"지평선 위 — 날씨와 밝기 등을 추가 확인하세요");
+            line(c,"0"+(++count)+"  "+Ephemeris.NAME[t.index],fmt(t.coord.altitude)+"° · "+Observation.azimuthText(t.coord.azimuth)+"  ("+fmt(t.coord.azimuth)+"°)");
+            paragraph(c,t.coord.altitude<0?"지평선 아래 · 이 시각에는 보이지 않음":
+                    t.coord.altitude<15?"고도가 낮아 건물·지형·대기의 영향을 많이 받음":
+                    "지평선 위 · 구름·기상·밝기·광공해를 추가 확인해");
+            LinearLayout pr=row(c);
+            final int idx=t.index;
+            button(pr,"행성 사진·자세히 보기",()->planetDialog(idx));
             if(count>=3)break;
         }
         LinearLayout source=card();
-        paragraph(source,"이 순위는 맨눈으로 보이는 밝기 순위가 아니라 고도 순위입니다. 정밀 추천에는 일몰, 대기투명도, 달빛, 망원경 성능을 더 고려해야 합니다.");
-        sourceButton(source,"JPL 행성 위치 근거","https://ssd.jpl.nasa.gov/planets/approx_pos.html");
+        paragraph(source,"현재 1~3위는 밝기 순위가 아닌 천체의 겉보기 고도 순위야. 실제 관측 가능 여부는 구름, 광공해, 지형, 밝기, 달빛 등의 영향을 받아.");
+        sourceButton(source,"관측 좌표 기준","https://ssd.jpl.nasa.gov/planets/approx_pos.html");
+        sourceButton(source,"날씨 정보 제공처","https://open-meteo.com/");
     }
+
+
     private void showMoon(){
-        header("🌙 달 관측실");
+        header("🌙 달 아카이브 & 위상");
         long now=System.currentTimeMillis();
         LinearLayout moon=card();
-        MoonView moonView=new MoonView(this,now);
-        moon.addView(moonView,new LinearLayout.LayoutParams(-1,dp(240)));
-        line(moon,MoonPhase.description(now),"조명 비율 약 "+fmt(MoonPhase.lit(now)*100)+"%");
+        ImageView lunar=new ImageView(this);
+        lunar.setBackground(background(0xff06101E,16));
+        lunar.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        moon.addView(lunar,new LinearLayout.LayoutParams(-1,dp(260)));
+        TextView loading=text("NASA 실제 달 사진을 불러오는 중…",12,MUTED,false);
+        moon.addView(loading);
+        Bitmap saved=MoonPhoto.cached(this);
+        if(saved!=null){
+            lunar.setImageBitmap(MoonPhoto.phaseComposited(saved,now,440));
+            loading.setText("NASA 실제 사진 · 현재 위상은 계산한 명암을 입힌 합성 표현");
+        }else{
+            MoonPhoto.load(this,photo->{
+                if(photo!=null && activeTab==2){
+                    lunar.setImageBitmap(MoonPhoto.phaseComposited(photo,now,440));
+                    loading.setText("NASA 실제 사진 · 현재 위상은 계산한 명암을 입힌 합성 표현");
+                }else if(photo==null)loading.setText("사진을 불러오지 못했어 · 인터넷 연결을 확인해 줘");
+            });
+        }
+        line(moon,MoonPhase.description(now),"태양에 비친 면의 비율 · 약 "+fmt(MoonPhase.lit(now)*100)+"%");
         line(moon,"삭 이후 경과","약 "+fmt(MoonPhase.age(now))+"일");
         line(moon,"다음 보름까지","약 "+fmt(MoonPhase.untilFull(now))+"일");
-        paragraph(moon,"달 위상은 평균 삭망월에 기반한 근사 계산이야. 정밀 달 좌표, 월출·월몰, 월식 예측은 아직 지원하지 않아. 달 표면은 사진이 아닌 절차적 삽화야.");
-        sourceButton(moon,"NASA 달 설명","https://science.nasa.gov/moon/");
+        paragraph(moon,"달 표면은 NASA의 실물 관측 사진이지만 촬영 당시의 기록이야. 어두운 부분은 현재 위상을 평균 삭망월로 단순화해 적용한 모형이며 실제 달의 방향·칭동을 정밀하게 재현한 실시간 영상이 아니야.");
+        sourceButton(moon,"NASA 달 실제 사진 원문",MoonPhoto.SOURCE);
+        sourceButton(moon,"NASA 달 관측 자료","https://science.nasa.gov/moon/image-galleries/");
     }
+
     private void showEvents(){
         header("☄ 주요 천문 이벤트");
         LinearLayout intro=card();
@@ -268,8 +355,16 @@ public final class MainActivity extends Activity {
                 }else if(bitmap==null)loading.setText("NASA 사진 미확인 · 자료 링크에서 직접 확인 가능");
             });
         }
-        paragraph(c,obj.fact);
-        paragraph(c,"정보 출처는 NASA · 사진 출처는 NASA Images API. 사진마다 저작권 조건이 다를 수 있어.");
+        CosmicDetails.Info details=CosmicDetails.get(selectedCatalog);
+        line(c,"천체 유형",obj.kind+" · "+obj.english);
+        line(c,"지구에서의 거리",details.distance);
+        line(c,"하늘에서 찾는 영역",details.region);
+        line(c,"무엇이 특별할까?",obj.fact);
+        paragraph(c,details.science);
+        line(c,"🔭 실제 관측 팁",details.observation);
+        line(c,"💡 알아두면 좋은 사실",details.question);
+        paragraph(c,"사진은 NASA Image Library의 과거 관측 기록이야. 관측 파장·합성 여부·원본 크레딧은 링크에서 확인해 줘. 확인되지 않은 천체 사진은 임의로 만들어 표시하지 않아.");
+        sourceButton(c,"근거가 되는 NASA 연구·설명",details.reference);
         LinearLayout buttons=row(c);
         button(buttons,"↻ 다른 천체",()->{
             CosmicCatalog.next(this,-1);
