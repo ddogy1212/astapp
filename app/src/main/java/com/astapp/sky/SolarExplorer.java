@@ -121,6 +121,8 @@ public final class SolarExplorer extends FrameLayout {
             float[][] xy=renderer.screen;
             if(xy==null)return;
             float density=getResources().getDisplayMetrics().density;
+            float margin=6*density,fh=16*density;
+            java.util.ArrayList<RectF> occupied=new java.util.ArrayList<>();
             paint.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
             paint.setTextSize(12*density);
             for(int i=0;i<xy.length;i++){
@@ -129,15 +131,37 @@ public final class SolarExplorer extends FrameLayout {
                 if(x<0||x>getWidth()||y<32*density||y>getHeight()-27*density)continue;
                 String label=Ephemeris.NAME[i];
                 float width=paint.measureText(label);
-                float tx=Math.max(6*density,Math.min(getWidth()-width-6*density,x+12*density));
-                float ty=Math.max(25*density,Math.min(getHeight()-10*density,y-11*density));
+                // Avoid label collisions: try above/right, above/left,
+                // below/right and below/left, with staggered vertical bands.
+                RectF choice=null;
+                for(int pass=0;pass<3&&choice==null;pass++){
+                    for(int pos=0;pos<4;pos++){
+                        boolean left=(pos%2)==1,lower=(pos/2)==1;
+                        float tx=x+(left?-width-18*density:13*density);
+                        float ty=y+(lower?24*density+pass*18*density:-12*density-pass*18*density);
+                        tx=Math.max(margin,Math.min(getWidth()-width-margin,tx));
+                        ty=Math.max(23*density,Math.min(getHeight()-19*density,ty));
+                        RectF rect=new RectF(tx-4*density,ty-13*density,
+                            tx+width+4*density,ty+4*density);
+                        boolean overlaps=false;
+                        for(RectF other:occupied){
+                            if(RectF.intersects(rect,other)){overlaps=true;break;}
+                        }
+                        if(!overlaps){choice=rect;break;}
+                    }
+                }
+                if(choice==null)continue;
+                occupied.add(choice);
+                float tx=choice.left+4*density,ty=choice.bottom-4*density;
                 paint.setStyle(Paint.Style.FILL);
-                paint.setColor(0xb0000000);c.drawRoundRect(tx-4*density,ty-13*density,
-                    tx+width+4*density,ty+4*density,4*density,4*density,paint);
-                paint.setColor(0xfff0f0f0);c.drawText(label,tx,ty,paint);
+                paint.setColor(0xd5000000);
+                c.drawRoundRect(choice,4*density,4*density,paint);
+                paint.setColor(0xfff1f1f1);
+                c.drawText(label,tx,ty,paint);
             }
             paint.setColor(0xffb1b1b1);paint.setTextSize(10*density);
-            c.drawText("3D ORBIT / NASA PHOTO MARKERS",12*density,getHeight()-12*density,paint);
+            c.drawText("3D ORBIT / NASA PHOTO MARKERS",
+                12*density,getHeight()-12*density,paint);
         }
     }
     private static final class UniverseSurface extends GLSurfaceView{
