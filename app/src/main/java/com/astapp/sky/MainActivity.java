@@ -21,7 +21,7 @@ public final class MainActivity extends Activity {
     private LinearLayout page,nav;
     private int activeTab=0;
     private long solarTime=System.currentTimeMillis();
-    private boolean compressed=true;
+    private boolean compressed=false;
     private PlanetView planetView;
     private int selectedCatalog=-1;
     private double observerLat=37.5665,observerLon=126.9780;
@@ -36,7 +36,7 @@ public final class MainActivity extends Activity {
         observerLat=Double.longBitsToDouble(pref.getLong("lat",Double.doubleToLongBits(observerLat)));
         observerLon=Double.longBitsToDouble(pref.getLong("lon",Double.doubleToLongBits(observerLon)));
         site=pref.getString("site",site);
-        compressed=pref.getBoolean("scale_compressed",true);
+        compressed=pref.getBoolean("scale_compressed",false);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
         setContentView(root);
         TextView heading=text("ASTAPP   ✦   우주를 홈 화면에",21,TEXT,true);
