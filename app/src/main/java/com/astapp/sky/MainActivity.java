@@ -16,8 +16,8 @@ import java.util.*;
  * Android home widgets cannot animate continuously.
  */
 public final class MainActivity extends Activity {
-    private static final int BG=0xff07101F, SURFACE=0xff142239, SURFACE2=0xff243759;
-    private static final int TEXT=0xffEFF6FF, MUTED=0xffA7B9D4, BLUE=0xff9AC5FF;
+    private static final int BG=0xff080808, SURFACE=0xff151515, SURFACE2=0xff292929;
+    private static final int TEXT=0xffFAFAFA, MUTED=0xffA5A5A5, BLUE=0xffF2F2F2;
     private LinearLayout page,nav;
     private int activeTab=0;
     private long solarTime=System.currentTimeMillis();
@@ -26,28 +26,63 @@ public final class MainActivity extends Activity {
     private int selectedCatalog=-1;
     private double observerLat=37.5665,observerLon=126.9780;
     private String site="서울 기준점(직접 변경 가능)";
-    private static final String[] TABS={"🪐 태양계","🔭 관측","🌙 달","☄ 이벤트","✦ 우주 도감"};
+    private static final String[] TABS={"◎\n궤도","⌖\n관측","◐\n달","✧\n이벤트","▦\n도감"};
+    private String selectedCategory="전체";
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
+        if(android.os.Build.VERSION.SDK_INT>=29)getWindow().setNavigationBarContrastEnforced(false);
+        getWindow().getDecorView().setSystemUiVisibility(0);
         android.content.SharedPreferences pref=getSharedPreferences("ast",0);
         observerLat=Double.longBitsToDouble(pref.getLong("lat",Double.doubleToLongBits(observerLat)));
         observerLon=Double.longBitsToDouble(pref.getLong("lon",Double.doubleToLongBits(observerLon)));
         site=pref.getString("site",site);
         compressed=pref.getBoolean("scale_compressed",false);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BG);
+        // Android 15+ edge-to-edge enforces drawing beneath the system nav bar.
+        // Reserve both top status-bar and bottom navigation/gesture insets on the root.
+        root.setOnApplyWindowInsetsListener((view,insets)->{
+            int left,top,right,bottom;
+            if(android.os.Build.VERSION.SDK_INT>=30){
+                android.graphics.Insets safe=insets.getInsets(
+                    android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.ime());
+                android.graphics.Insets gestures=insets.getInsets(android.view.WindowInsets.Type.systemGestures());
+                left=safe.left;top=safe.top;right=safe.right;bottom=Math.max(safe.bottom,gestures.bottom);
+            }else{
+                left=insets.getSystemWindowInsetLeft();
+                top=insets.getSystemWindowInsetTop();
+                right=insets.getSystemWindowInsetRight();
+                bottom=insets.getSystemWindowInsetBottom();
+            }
+            view.setPadding(left,top,right,bottom);
+            return insets;
+        });
         setContentView(root);
-        TextView heading=text("ASTAPP   ✦   우주를 홈 화면에",21,TEXT,true);
-        heading.setPadding(dp(20),dp(26),dp(18),dp(14));root.addView(heading);
-        HorizontalScrollView tabs=new HorizontalScrollView(this);
-        tabs.setHorizontalScrollBarEnabled(false);
-        nav=new LinearLayout(this);nav.setPadding(dp(8),0,dp(8),dp(8));
-        tabs.addView(nav);tabs.setBackgroundColor(0xff0B1A2E);
+        root.requestApplyInsets();
+        LinearLayout head=new LinearLayout(this);
+        head.setOrientation(LinearLayout.VERTICAL);
+        head.setPadding(dp(22),dp(19),dp(18),dp(14));
+        TextView eyebrow=text("AST / ASTRONOMY STUDIO",10,MUTED,true);
+        eyebrow.setLetterSpacing(.20f);
+        head.addView(eyebrow);
+        TextView heading=text("ASTAPP",31,TEXT,true);
+        heading.setLetterSpacing(-.045f);
+        head.addView(heading);
+        root.addView(head);
+        LinearLayout tabs=new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.VERTICAL);
+        tabs.setBackgroundColor(0xff101010);
+        nav=new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setPadding(dp(7),dp(7),dp(7),dp(7));
+        tabs.addView(nav,new LinearLayout.LayoutParams(-1,-2));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(14),dp(8),dp(14),dp(32));
+        page.setPadding(dp(16),dp(6),dp(16),dp(24));
         scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(tabs);
         int requested=getIntent().getIntExtra("tab",0);
         showTab(Math.max(0,Math.min(TABS.length-1,requested)));
@@ -63,7 +98,7 @@ public final class MainActivity extends Activity {
     }
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private GradientDrawable background(int color,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0xff344962);return d;
+        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0xff353535);return d;
     }
     private TextView text(String s,int size,int color,boolean bold){
         TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);
@@ -73,8 +108,9 @@ public final class MainActivity extends Activity {
     }
     private LinearLayout card(){
         LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(15),dp(16),dp(17));
-        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff172A47,0xff0E1C34});
-        bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff2A405E);c.setBackground(bg);
+        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff1A1A1A,0xff111111});
+        bg.setCornerRadius(dp(20));bg.setStroke(dp(1),0xff303030);
+        c.setBackground(bg);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(12));
         page.addView(c,p);return c;
     }
@@ -94,7 +130,7 @@ public final class MainActivity extends Activity {
     }
     private TextView button(LinearLayout where,String label,Runnable click){
         TextView b=text(label,12,TEXT,true);b.setGravity(Gravity.CENTER);b.setPadding(dp(9),dp(12),dp(9),dp(12));
-        b.setBackground(background(SURFACE2,16));b.setElevation(dp(1));
+        b.setBackground(background(SURFACE2,14));b.setMinHeight(dp(46));b.setElevation(0);
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),0,dp(3),0);
         where.addView(b,lp);b.setOnClickListener(v->click.run());return b;
     }
@@ -108,12 +144,18 @@ public final class MainActivity extends Activity {
         activeTab=tab;
         nav.removeAllViews();
         for(int i=0;i<TABS.length;i++){
-            final int t=i;
-            TextView b=text(TABS[i],13,i==tab?0xff051426:MUTED,true);
-            b.setPadding(dp(15),dp(13),dp(15),dp(13));
-            b.setBackground(background(i==tab?BLUE:SURFACE,14));
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(dp(3),0,dp(3),0);
-            nav.addView(b,p);b.setOnClickListener(v->showTab(t));
+            final int target=i;
+            TextView item=text(TABS[i],12,i==tab?0xff090909:MUTED,i==tab);
+            item.setGravity(Gravity.CENTER);
+            item.setLineSpacing(dp(3),1f);
+            item.setMinHeight(dp(58));
+            item.setPadding(dp(1),dp(7),dp(1),dp(7));
+            item.setBackground(background(i==tab?0xffF8F8F8:0xff181818,13));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(58),1f);
+            p.setMargins(dp(3),0,dp(3),0);
+            nav.addView(item,p);
+            item.setContentDescription(new String[]{"태양계","관측","달","천문 이벤트","우주 도감"}[i]);
+            item.setOnClickListener(v->showTab(target));
         }
         page.removeAllViews();
         switch(tab){
@@ -333,7 +375,7 @@ public final class MainActivity extends Activity {
         }
     }
     private void showCatalog(){
-        header("🌌 COSMIC DISCOVERY");
+        header("DISCOVERY / 천체 아카이브");
         if(selectedCatalog<0)selectedCatalog=CosmicCatalog.daily(this,-1);
         CosmicCatalog.Object obj=CosmicCatalog.ALL[selectedCatalog];
         LinearLayout c=card();
