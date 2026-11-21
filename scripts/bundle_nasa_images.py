@@ -40,6 +40,17 @@ TARGETS=[
     ("cosmic_6","M13 globular cluster","globular"),
     ("cosmic_7","Whirlpool Galaxy M51","whirlpool")
 ]
+# These NASA IDs were cross-checked against official photojournal entries.
+# The originals are observations or mosaics, not artist impressions.
+PREFERRED={
+    "planet_0":("PIA16853","Mercury MESSENGER enhanced-color observation"),
+    "planet_1":("PIA00072","Venus Galileo ultraviolet cloud observation"),
+    "planet_3":("PIA00407","Mars Viking global color image mosaic"),
+    "planet_4":("PIA04866","Jupiter Cassini true-color spacecraft mosaic"),
+    "planet_5":("PIA01969","Saturn Voyager 2 archival rings photograph"),
+    "planet_7":("PIA01492","Neptune Voyager 2 full-disk image"),
+    "moon":("GSFC_20171208_Archive_e001982","NASA Clementine full Moon observation composite")
+}
 NO_ART=re.compile(r"artist|illustrat|simulation|computer.?generat|animation|diagram|infographic|painting|concept|render|graphic|movie poster",re.I)
 USER_AGENT={"User-Agent":"ASTAPP/0.4 educational research (NASA imagery credit preserved)"}
 ALLOWED_CENTERS={"JPL","JSC","GSFC","MSFC","ARC","KSC","HQ","AMES","STSCI","NASA"}
@@ -56,6 +67,20 @@ def fetch(item):
     filepath=OUTPUT/(stem+".jpg")
     meta={}
     try:
+        if stem in PREFERRED:
+            nasa_id,title=PREFERRED[stem]
+            url=f"https://images-assets.nasa.gov/image/{nasa_id}/{nasa_id}~thumb.jpg"
+            try:
+                jpeg=get(url,2100000)
+                if jpeg.startswith(b"\\xff\\xd8\\xff"):
+                    filepath.write_bytes(jpeg)
+                    meta={"nasa_id":nasa_id,"title":title,"center":"NASA",
+                          "credit":"NASA / archival science data",
+                          "details":"https://images.nasa.gov/details/"+nasa_id,
+                          "size":len(jpeg)}
+                    return (stem,meta,None)
+            except Exception as exception:
+                print("CURATED IMAGE RETRY",stem,str(exception)[:90],flush=True)
         params=urllib.parse.urlencode({"q":query,"media_type":"image","page_size":40})
         body=json.loads(get(SEARCH+"?"+params,1600000))
         entries=body.get("collection",{}).get("items",[])
