@@ -412,6 +412,7 @@ public final class MainActivity extends Activity {
     }
     private boolean categoryMatch(int index,String category){
         if(category.equals("전체"))return true;
+        if(category.equals("저장"))return CosmicCatalog.favorite(this,CosmicCatalog.ALL[index].english);
         if(category.equals("행성"))return SolarBodyFacts.isPlanet(index);
         if(category.equals("위성"))return index==30||index==32||index==33||index==34;
         if(category.equals("왜행성"))return index==31;
@@ -465,7 +466,7 @@ public final class MainActivity extends Activity {
     private void showCatalog(){
         header("COSMIC DISCOVERY");
         if(selectedCatalog<0)selectedCatalog=CosmicCatalog.daily(this,-1);
-        final String[] categories={"전체","행성","위성","왜행성","성운","은하","성단","항성"};
+        final String[] categories={"전체","저장","행성","위성","왜행성","성운","은하","성단","항성"};
         TextView explanation=text("35개 천체 · 행성부터 먼 은하까지",13,MUTED,false);
         explanation.setPadding(dp(3),0,0,dp(8));
         page.addView(explanation);
@@ -498,6 +499,9 @@ public final class MainActivity extends Activity {
                 if(!categoryMatch(selectedCatalog,category))selectedCatalog=nextCatalogInCategory(selectedCatalog,category);
                 showTab(4);
             });
+        }
+        if(selectedCategory.equals("저장")){
+            showSavedObjects();return;
         }
         final CosmicCatalog.Object obj=CosmicCatalog.ALL[selectedCatalog];
         final int index=selectedCatalog;
@@ -541,6 +545,15 @@ public final class MainActivity extends Activity {
                 else loadCatalogFallback(obj,index,image,photoCaption);
             });
         }else loadCatalogFallback(obj,index,image,photoCaption);
+        LinearLayout primary=row(c);
+        TextView next=button(primary,"다른 천체 ↻",()->{
+            selectedCatalog=randomCatalogInCategory(selectedCatalog,selectedCategory);
+            showTab(4);
+        });
+        next.setBackground(background(0xffeeeeee,14));next.setTextColor(0xff0a0a0a);
+        button(primary,CosmicCatalog.favorite(this,obj.english)?"★ 저장됨":"☆ 저장",()->{
+            CosmicCatalog.toggleFavorite(this,obj.english);showTab(4);
+        });
         CosmicDetails.Info details=CosmicDetails.get(index);
         line(c,"CLASSIFICATION",obj.kind);
         line(c,"DISTANCE",details.distance);
@@ -551,20 +564,59 @@ public final class MainActivity extends Activity {
         line(c,"관측 가이드",details.observation);
         line(c,"알아두면 좋은 사실",details.question);
         paragraph(c,"사진은 NASA 과거 탐사·관측 자료야. 관측 파장과 사진 크레딧은 반드시 원문을 참고해. 사진을 확인할 수 없으면 임의의 가짜 사진으로 대체하지 않아.");
-        LinearLayout buttons=row(c);
-        button(buttons,"다른 천체 ↻",()->{
-            selectedCatalog=randomCatalogInCategory(selectedCatalog,selectedCategory);
-            showTab(4);
-        });
-        button(buttons,CosmicCatalog.favorite(this,obj.english)?"★ 저장됨":"☆ 저장",()->{
-            CosmicCatalog.toggleFavorite(this,obj.english);showTab(4);
-        });
         sourceButton(c,"NASA 천체 상세 정보",details.reference);
         sourceButton(c,"NASA 실제 사진 검색","https://images.nasa.gov/search?q="+Uri.encode(obj.query));
         LinearLayout info=card();
         line(info,"HOME WIDGET","2×1 / 2×2 / 4×2 / 4×4");
         paragraph(info,"우주 발견 위젯에서도 행성·위성·왜행성이 등장해. 위젯을 누르면 이 상세 정보 화면으로 이동할 수 있어.");
         paragraph(info,"NASA Images API에서 실제 촬영 사진을 검색하며, 인터넷 연결이나 원본 자료에 따라 이미지를 표시하지 못할 수 있어.");
+    }
+    private void showSavedObjects(){
+        LinearLayout intro=card();
+        int count=0;
+        for(CosmicCatalog.Object o:CosmicCatalog.ALL){
+            if(CosmicCatalog.favorite(this,o.english))count++;
+        }
+        line(intro,"MY COLLECTION",count+"개의 천체가 저장되어 있어");
+        paragraph(intro,"저장한 천체를 누르면 실제 사진과 상세 정보를 다시 볼 수 있어.");
+        if(count==0){
+            paragraph(intro,"아직 저장한 천체가 없어. 행성이나 성운을 탐험하면서 ☆ 저장을 눌러봐.");
+            LinearLayout actions=row(intro);
+            button(actions,"천체 둘러보기",()->{selectedCategory="전체";showTab(4);});
+            return;
+        }
+        for(int index=0;index<CosmicCatalog.ALL.length;index++){
+            CosmicCatalog.Object o=CosmicCatalog.ALL[index];
+            if(!CosmicCatalog.favorite(this,o.english))continue;
+            final int selected=index;
+            LinearLayout container=card();
+            container.setPadding(dp(12),dp(9),dp(12),dp(9));
+            LinearLayout item=row(container);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            ImageView image=new ImageView(this);
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackground(background(0xff2b2b2b,10));
+            LinearLayout.LayoutParams imageParams=new LinearLayout.LayoutParams(dp(70),dp(70));
+            item.addView(image,imageParams);
+            Bitmap photo=SolarBodyFacts.isPlanet(index)?
+                PlanetPhotos.cached(this,SolarBodyFacts.planetIndex(index)):
+                SolarBodyFacts.isMoon(index)?MoonPhoto.cached(this):NasaPhotos.cached(this,o);
+            if(photo==null)photo=NasaPhotos.cached(this,o);
+            if(photo!=null)image.setImageBitmap(photo);
+            LinearLayout nameBox=new LinearLayout(this);
+            nameBox.setOrientation(LinearLayout.VERTICAL);
+            nameBox.setPadding(dp(12),0,0,0);
+            item.addView(nameBox,new LinearLayout.LayoutParams(0,-2,1));
+            nameBox.addView(text(o.name,17,TEXT,true));
+            nameBox.addView(text(o.english+" · "+o.kind,12,MUTED,false));
+            TextView icon=text("›",27,TEXT,false);
+            icon.setPadding(dp(8),0,dp(2),0);
+            item.addView(icon);
+            container.setOnClickListener(v->{
+                selectedCategory="전체";selectedCatalog=selected;showTab(4);
+            });
+            container.setContentDescription(o.name+" 천체 상세 정보 열기");
+        }
     }
     private void loadCatalogFallback(CosmicCatalog.Object obj,int index,ImageView image,TextView caption){
         NasaPhotos.load(this,obj,(bitmap,attribution)->{
