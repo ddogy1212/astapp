@@ -125,6 +125,7 @@ public final class SkyWidgets {
             Bitmap cached=SolarBodyFacts.isPlanet(index)?
                 PlanetPhotos.cached(c,SolarBodyFacts.planetIndex(index)):
                 SolarBodyFacts.isMoon(index)?MoonPhoto.cached(c):NasaPhotos.cached(c,o);
+            if(cached==null)cached=NasaPhotos.cached(c,o);
             rv.setImageViewBitmap(R.id.discover_image,cached==null?fallback(w,h,o):cached);
             rv.setOnClickPendingIntent(R.id.discover_image,open(c,id,4));
             rv.setTextViewText(R.id.discover_fact,o.fact);
