@@ -269,7 +269,10 @@ public final class MainActivity extends Activity {
         if(cached!=null)picture.setImageBitmap(cached);
         else PlanetPhotos.load(this,i,photo->{if(photo!=null)picture.setImageBitmap(photo);});
         wrap.addView(text(Ephemeris.NAME[i]+"  ·  "+Ephemeris.ENGLISH[i],22,TEXT,true));
-        TextView credit=text("NASA 과거 관측 사진 · "+PlanetFacts.PHOTO_NOTE[i]+" · 현재 모습 아님",11,MUTED,false);
+        NasaCredits.Credit documented=NasaCredits.byKey(this,"planet_"+i);
+        TextView credit=text(documented==null?
+            "NASA 과거 관측 사진 · "+PlanetFacts.PHOTO_NOTE[i]+" · 현재 모습 아님":
+            documented.caption()+" · 촬영 당시 자료",11,MUTED,false);
         wrap.addView(credit);
         TextView description=text(PlanetFacts.SUMMARY[i],14,TEXT,false);
         description.setPadding(0,dp(14),0,dp(16));wrap.addView(description);
@@ -574,25 +577,50 @@ public final class MainActivity extends Activity {
         photoCaption.setPadding(0,dp(9),0,dp(10));
         c.addView(photoCaption);
         // Real archive images only. No fabricated astronomical photographs.
+        NasaCredits.Credit photoCredit=NasaCredits.forCatalog(this,index);
+        TextView retry=text("↻ 사진 다시 불러오기",12,TEXT,true);
+        retry.setGravity(Gravity.CENTER);
+        retry.setBackground(background(0xff252525,11));
+        retry.setMinHeight(dp(44));
+        c.addView(retry,new LinearLayout.LayoutParams(-1,dp(44)));
+        retry.setOnClickListener(v->{
+            photoCaption.setText("NASA 관측 사진을 다시 확인하는 중…");
+            retry.setVisibility(View.GONE);
+            NasaPhotos.load(this,obj,(fresh,attribution)->{
+                if(activeTab!=4||selectedCatalog!=index)return;
+                if(fresh!=null){
+                    image.setImageBitmap(fresh);
+                    photoCaption.setText("NASA 검색 자료 · 상세 크레딧은 원문에서 확인");
+                }else{
+                    photoCaption.setText("사진을 찾지 못했어. 인터넷 또는 NASA 원문을 확인해 줘.");
+                    retry.setVisibility(View.VISIBLE);
+                }
+            });
+        });
         Bitmap bitmap=SolarBodyFacts.isPlanet(index)?
             PlanetPhotos.cached(this,SolarBodyFacts.planetIndex(index)):
             SolarBodyFacts.isMoon(index)?MoonPhoto.cached(this):NasaPhotos.cached(this,obj);
         if(bitmap==null)bitmap=NasaPhotos.cached(this,obj);
         if(bitmap!=null){
             image.setImageBitmap(bitmap);
-            photoCaption.setText("NASA 아카이브 관측 사진 · 촬영 시각은 현재와 다름");
+            photoCaption.setText(photoCredit==null?
+                "NASA 이미지 · 원본 크레딧은 NASA에서 확인":
+                photoCredit.caption()+" · 관측 당시 사진");
+            retry.setVisibility(View.GONE);
         }else if(SolarBodyFacts.isPlanet(index)){
             PlanetPhotos.load(this,SolarBodyFacts.planetIndex(index),photo->{
                 if(activeTab!=4||selectedCatalog!=index)return;
                 if(photo!=null){image.setImageBitmap(photo);
-                    photoCaption.setText("NASA 탐사선/우주망원경 촬영 · 현재 사진이 아님");}
+                    photoCaption.setText("NASA 탐사선 관측 사진 · 현재 사진이 아님");
+                    retry.setVisibility(View.GONE);}
                 else loadCatalogFallback(obj,index,image,photoCaption);
             });
         }else if(SolarBodyFacts.isMoon(index)){
             MoonPhoto.load(this,photo->{
                 if(activeTab!=4||selectedCatalog!=index)return;
                 if(photo!=null){image.setImageBitmap(photo);
-                    photoCaption.setText("NASA 실제 달 촬영 자료 · 현재 위상이 아님");}
+                    photoCaption.setText("NASA 달 관측 사진 · 현재 위상이 아님");
+                    retry.setVisibility(View.GONE);}
                 else loadCatalogFallback(obj,index,image,photoCaption);
             });
         }else loadCatalogFallback(obj,index,image,photoCaption);
@@ -616,7 +644,8 @@ public final class MainActivity extends Activity {
         line(c,"알아두면 좋은 사실",details.question);
         paragraph(c,"사진은 NASA 과거 탐사·관측 자료야. 관측 파장과 사진 크레딧은 반드시 원문을 참고해. 사진을 확인할 수 없으면 임의의 가짜 사진으로 대체하지 않아.");
         sourceButton(c,"NASA 천체 상세 정보",details.reference);
-        sourceButton(c,"NASA 실제 사진 검색","https://images.nasa.gov/search?q="+Uri.encode(obj.query));
+        sourceButton(c,photoCredit==null?"NASA 실제 사진 검색":"촬영 사진 원본·크레딧",
+            photoCredit==null?"https://images.nasa.gov/search?q="+Uri.encode(obj.query):photoCredit.url);
         LinearLayout info=card();
         line(info,"HOME WIDGET","2×1 / 2×2 / 4×2 / 4×4");
         paragraph(info,"우주 발견 위젯에서도 행성·위성·왜행성이 등장해. 위젯을 누르면 이 상세 정보 화면으로 이동할 수 있어.");
