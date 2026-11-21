@@ -66,10 +66,7 @@ jobs:
             adb shell screencap -p /sdcard/ast-observe.png
             adb pull /sdcard/ast-observe.png screenshots/03-observe.png
             adb logcat -d -t 2500 > screenshots/logcat.txt
-            if grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL' screenshots/logcat.txt; then
-              echo "Detected app crash in smoke screenshots" >&2
-              exit 1
-            fi
+            ! grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL' screenshots/logcat.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
