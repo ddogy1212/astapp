@@ -11,7 +11,7 @@ import java.util.Random;
  */
 public final class SolarPainter {
     private SolarPainter(){}
-    private static final int NAVY=0xff071323,INK=0xffD9E8FF,SOFT=0xff90A8CC;
+    private static final int NAVY=0xff080808,INK=0xffEEEEEE,SOFT=0xffB0B0B0;
     private static final Paint P=new Paint(3);
     public static Bitmap bitmap(Context context,int w,int h,long date,boolean compressed,
                                 boolean threeD,double yaw,double tilt,double zoom){
@@ -23,7 +23,7 @@ public final class SolarPainter {
     public static void draw(Context context,Canvas c,int w,int h,long date,boolean compressed,
                             boolean threeD,double yaw,double tilt,double zoom){
         P.reset();P.setAntiAlias(true);
-        P.setShader(new LinearGradient(0,0,w,h,0xff142A4B,NAVY,Shader.TileMode.CLAMP));
+        P.setShader(new LinearGradient(0,0,w,h,0xff161616,NAVY,Shader.TileMode.CLAMP));
         c.drawRect(0,0,w,h,P);P.setShader(null);
         Random stars=new Random(28711);
         int count=Math.min(220,Math.max(35,w*h/1600));
@@ -56,7 +56,7 @@ public final class SolarPainter {
                                  double yaw,double tilt,double zoom,boolean boxed){
         P.setStyle(Paint.Style.FILL);
         if(boxed){
-            P.setColor(0xD9142B49);
+            P.setColor(0xE81B1B1B);
             c.drawRoundRect(new RectF(left,top,left+w,top+h),12,12,P);
         }
         c.save();
@@ -65,7 +65,7 @@ public final class SolarPainter {
         float cx=left+w*.5f,cy=top+titleH+(h-titleH)*(boxed?.53f:.51f);
         float scale=(Math.min(w,h-titleH)*.415f)*(float)zoom;
         if(boxed){
-            P.setColor(0xffCDE0FA);P.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
+            P.setColor(0xffF1F1F1);P.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
             P.setTextSize(Math.max(11,Math.min(17,w/17f)));
             c.drawText(first==0?"INNER · 0–2.15 AU":"OUTER · 0–34.5 AU",left+9,top+15,P);
             P.setTypeface(Typeface.DEFAULT);
@@ -73,10 +73,10 @@ public final class SolarPainter {
         // Draw 1 AU or 10 AU scale tick in each pane.
         if(boxed){
             double tick=first==0?1:10;
-            P.setColor(0x5584A2D4);P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(1);
+            P.setColor(0x558D8D8D);P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(1);
             float rr=(float)(scale*tick/maxAU);
             c.drawCircle(cx,cy,rr,P);P.setStyle(Paint.Style.FILL);
-            P.setColor(0xff829BC0);P.setTextSize(Math.max(9,Math.min(12,w/23f)));
+            P.setColor(0xffB5B5B5);P.setTextSize(Math.max(9,Math.min(12,w/23f)));
             c.drawText(first==0?"1 AU":"10 AU",cx+rr+3,cy,P);
         }
         float sunRadius=Math.max(3.5f,Math.min(7,Math.min(w,h)*.026f));
@@ -92,7 +92,7 @@ public final class SolarPainter {
                 if(k==0)orbit.moveTo(pt[0],pt[1]);else orbit.lineTo(pt[0],pt[1]);
             }
             P.setStyle(Paint.Style.STROKE);P.setStrokeWidth(boxed?.85f:1.1f);
-            P.setColor(boxed?0x588CA9CF:0x66869CB9);
+            P.setColor(boxed?0x668A8A8A:0x66888888);
             c.drawPath(orbit,P);P.setStyle(Paint.Style.FILL);
         }
         for(int n=last;n>=first;n--){
@@ -133,7 +133,7 @@ public final class SolarPainter {
     private static void drawPlanet(Context context,Canvas c,int index,float x,float y,float r){
         Bitmap photo=context==null?null:PlanetPhotos.cached(context,index);
         P.setShader(null);
-        P.setColor(0x443FADFF);
+        P.setColor(0x44777777);
         c.drawCircle(x,y,r+2.5f,P);
         if(photo!=null && !photo.isRecycled()){
             Path clip=new Path();clip.addCircle(x,y,r,Path.Direction.CW);
