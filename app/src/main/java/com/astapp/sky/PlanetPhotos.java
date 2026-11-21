@@ -54,23 +54,27 @@ public final class PlanetPhotos {
         IO.execute(()->{
             Bitmap bitmap=null;
             try {
-                String q=URLEncoder.encode(TERMS[index],"UTF-8");
-                JSONObject obj=NasaPhotos.jsonUrl("https://images-api.nasa.gov/search?q="+q+"&media_type=image&page_size=40");
-                JSONArray items=obj.getJSONObject("collection").getJSONArray("items");
-                for(int k=0;k<items.length();k++){
-                    JSONObject item=items.getJSONObject(k);
-                    JSONArray data=item.optJSONArray("data"), links=item.optJSONArray("links");
-                    if(data==null||data.length()==0||links==null||links.length()==0)continue;
-                    String title=data.getJSONObject(0).optString("title","").toLowerCase(java.util.Locale.ROOT);
-                    String description=data.getJSONObject(0).optString("description","").toLowerCase(java.util.Locale.ROOT);
-                    String full=title+" "+description;
-                    if(!full.contains(KEY[index]))continue;
-                    if(title.matches(".*(artist|illustrat|concept|poster|animation|diagram|infographic|render|model).*"))continue;
-                    String href=links.getJSONObject(0).optString("href","");
-                    if(!href.startsWith("https://"))continue;
-                    URL u=new URL(href);
-                    if(!u.getHost().endsWith(".nasa.gov"))continue;
-                    bitmap=download(u);
+                // Try a targeted NASA mission query, then a broader subject query.
+                for(String term:new String[]{TERMS[index], Ephemeris.ENGLISH[index]+" planet"}){
+                    String q=URLEncoder.encode(term,"UTF-8");
+                    JSONObject obj=NasaPhotos.jsonUrl("https://images-api.nasa.gov/search?q="+q+"&media_type=image&page_size=40");
+                    JSONArray items=obj.getJSONObject("collection").getJSONArray("items");
+                    for(int k=0;k<items.length();k++){
+                        JSONObject item=items.getJSONObject(k);
+                        JSONArray data=item.optJSONArray("data"), links=item.optJSONArray("links");
+                        if(data==null||data.length()==0||links==null||links.length()==0)continue;
+                        String title=data.getJSONObject(0).optString("title","").toLowerCase(java.util.Locale.ROOT);
+                        String desc=data.getJSONObject(0).optString("description","").toLowerCase(java.util.Locale.ROOT);
+                        if(!title.contains(KEY[index]) && !desc.contains(KEY[index]))continue;
+                        // We must not disguise a drawing, simulation or infographic as a photograph.
+                        if(title.matches(".*(artist|illustrat|concept|poster|animation|diagram|infographic|render|model|painting|artwork).*"))continue;
+                        String href=links.getJSONObject(0).optString("href","");
+                        if(!href.startsWith("https://"))continue;
+                        URL u=new URL(href);
+                        if(!u.getHost().endsWith(".nasa.gov"))continue;
+                        bitmap=download(u);
+                        if(bitmap!=null)break;
+                    }
                     if(bitmap!=null)break;
                 }
                 if(bitmap!=null){
