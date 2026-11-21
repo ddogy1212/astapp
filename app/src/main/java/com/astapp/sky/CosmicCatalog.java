@@ -55,7 +55,7 @@ public final class CosmicCatalog {
     public static int daily(Context c,int widgetId) {
         long day=java.time.LocalDate.now().toEpochDay();
         int offset=c.getSharedPreferences("ast",0).getInt("discover_"+widgetId,0);
-        return (int)Math.floorMod(day*17+offset*7,ALL.length);
+        return (int)Math.floorMod(day*17+offset*11,ALL.length);
     }
     public static Object current(Context c,int widgetId){return ALL[daily(c,widgetId)];}
     public static void next(Context c,int widgetId) {
