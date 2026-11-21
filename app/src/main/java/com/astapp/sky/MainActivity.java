@@ -407,6 +407,40 @@ public final class MainActivity extends Activity {
         }
         return from;
     }
+    private int randomCatalogInCategory(int current,String filter){
+        java.util.ArrayList<Integer> choices=new java.util.ArrayList<>();
+        for(int i=0;i<CosmicCatalog.ALL.length;i++){
+            if(i!=current && categoryMatch(i,filter))choices.add(i);
+        }
+        if(choices.isEmpty())return current;
+        return choices.get(new java.util.Random().nextInt(choices.size()));
+    }
+    private void searchCatalog(){
+        EditText search=new EditText(this);
+        search.setSingleLine(true);
+        search.setHint("천체 이름 · English name · 유형");
+        search.setTextColor(TEXT);
+        search.setHintTextColor(MUTED);
+        search.setPadding(dp(18),dp(14),dp(18),dp(14));
+        new AlertDialog.Builder(this)
+            .setTitle("천체 찾기")
+            .setView(search)
+            .setNegativeButton("취소",null)
+            .setPositiveButton("검색",(dialog,which)->{
+                String q=search.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+                if(q.isEmpty())return;
+                int found=-1;
+                for(int i=0;i<CosmicCatalog.ALL.length;i++){
+                    CosmicCatalog.Object o=CosmicCatalog.ALL[i];
+                    if(o.name.contains(q)||o.english.toLowerCase(java.util.Locale.ROOT).contains(q)
+                        ||o.kind.toLowerCase(java.util.Locale.ROOT).contains(q)){
+                        found=i;break;
+                    }
+                }
+                if(found<0){Toast.makeText(this,"검색된 천체가 없습니다",Toast.LENGTH_SHORT).show();return;}
+                selectedCatalog=found;selectedCategory="전체";showTab(4);
+            }).show();
+    }
     private void showCatalog(){
         header("COSMIC DISCOVERY");
         if(selectedCatalog<0)selectedCatalog=CosmicCatalog.daily(this,-1);
@@ -414,6 +448,13 @@ public final class MainActivity extends Activity {
         TextView explanation=text("35개 천체 · 행성부터 먼 은하까지",13,MUTED,false);
         explanation.setPadding(dp(3),0,0,dp(8));
         page.addView(explanation);
+        LinearLayout discoveryActions=row(page);
+        button(discoveryActions,"⌕ 천체 검색",this::searchCatalog);
+        button(discoveryActions,"⤨ 랜덤 발견",()->{
+            selectedCategory="전체";
+            selectedCatalog=randomCatalogInCategory(selectedCatalog,"전체");
+            showTab(4);
+        });
         HorizontalScrollView filters=new HorizontalScrollView(this);
         filters.setHorizontalScrollBarEnabled(false);
         LinearLayout chips=new LinearLayout(this);
@@ -490,7 +531,7 @@ public final class MainActivity extends Activity {
         paragraph(c,"사진은 NASA 과거 탐사·관측 자료야. 관측 파장과 사진 크레딧은 반드시 원문을 참고해. 사진을 확인할 수 없으면 임의의 가짜 사진으로 대체하지 않아.");
         LinearLayout buttons=row(c);
         button(buttons,"다른 천체 ↻",()->{
-            selectedCatalog=nextCatalogInCategory(selectedCatalog,selectedCategory);
+            selectedCatalog=randomCatalogInCategory(selectedCatalog,selectedCategory);
             showTab(4);
         });
         button(buttons,CosmicCatalog.favorite(this,obj.english)?"★ 저장됨":"☆ 저장",()->{
