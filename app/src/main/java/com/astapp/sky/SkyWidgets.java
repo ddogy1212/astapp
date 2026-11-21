@@ -41,7 +41,7 @@ public final class SkyWidgets {
         AppWidgetManager mgr=AppWidgetManager.getInstance(ctx);
         int w=size==0?330:640, h=size==2?440:230;
         long date=shifted(ctx,id);
-        boolean compressed=ctx.getSharedPreferences(PREF,0).getBoolean("scale_compressed",true);
+        boolean compressed=ctx.getSharedPreferences(PREF,0).getBoolean("scale_compressed",false);
         RemoteViews rv=new RemoteViews(ctx.getPackageName(),R.layout.widget_solar);
         rv.setTextViewText(R.id.solar_title,"☀ AST · 실제 궤도");
         rv.setTextViewText(R.id.solar_date,new SimpleDateFormat("yyyy.MM.dd HH:mm",Locale.KOREA).format(date));
