@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="#0B1A33"
+    android:padding="8dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <TextView android:id="@+id/solar_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#EDF4FF" android:textSize="12sp" android:textStyle="bold" android:text="AST · 태양계"/>
+        <TextView android:id="@+id/solar_date" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#A0B7D8" android:textSize="10sp"/>
+    </LinearLayout>
+    <ImageView android:id="@+id/solar_image" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:scaleType="fitXY" android:contentDescription="태양계 좌표 그림"/>
+    <TextView android:id="@+id/solar_note" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="9sp" android:textColor="#849CBF" android:gravity="center"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="28dp" android:orientation="horizontal" android:gravity="center">
+        <TextView android:id="@+id/solar_prev" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:gravity="center" android:text="◀ -1개월" android:textSize="11sp" android:textColor="#FFFFFF" android:background="#203755"/>
+        <TextView android:id="@+id/solar_now" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:gravity="center" android:text="지금" android:textSize="11sp" android:textColor="#FFFFFF" android:background="#2C476B"/>
+        <TextView android:id="@+id/solar_next" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:gravity="center" android:text="+1개월 ▶" android:textSize="11sp" android:textColor="#FFFFFF" android:background="#203755"/>
+    </LinearLayout>
+</LinearLayout>
