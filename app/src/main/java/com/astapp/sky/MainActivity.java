@@ -16,8 +16,8 @@ import java.util.*;
  * Android home widgets cannot animate continuously.
  */
 public final class MainActivity extends Activity {
-    private static final int BG=0xff071322, SURFACE=0xff12243C, SURFACE2=0xff1B3555;
-    private static final int TEXT=0xffEAF3FF, MUTED=0xffA2BCD9, BLUE=0xff7CB7FF;
+    private static final int BG=0xff07101F, SURFACE=0xff142239, SURFACE2=0xff243759;
+    private static final int TEXT=0xffEFF6FF, MUTED=0xffA7B9D4, BLUE=0xff9AC5FF;
     private LinearLayout page,nav;
     private int activeTab=0;
     private long solarTime=System.currentTimeMillis();
@@ -40,17 +40,22 @@ public final class MainActivity extends Activity {
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(BG);
         setContentView(root);
         TextView heading=text("ASTAPP   ✦   우주를 홈 화면에",21,TEXT,true);
-        heading.setPadding(dp(18),dp(23),dp(14),dp(12));root.addView(heading);
+        heading.setPadding(dp(20),dp(26),dp(18),dp(14));root.addView(heading);
         HorizontalScrollView tabs=new HorizontalScrollView(this);
         tabs.setHorizontalScrollBarEnabled(false);
         nav=new LinearLayout(this);nav.setPadding(dp(8),0,dp(8),dp(8));
-        tabs.addView(nav);root.addView(tabs);
+        tabs.addView(nav);tabs.setBackgroundColor(0xff0B1A2E);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(14),dp(8),dp(14),dp(32));
-        scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(tabs);
         int requested=getIntent().getIntExtra("tab",0);
         showTab(Math.max(0,Math.min(TABS.length-1,requested)));
+        for(int i=0;i<8;i++){
+            final int index=i;
+            PlanetPhotos.load(this,index,bmp->{if(bmp!=null){SkyWidgets.refreshSolar(this);if(planetView!=null)planetView.invalidate();}});
+        }
+        MoonPhoto.load(this,bmp->{});
     }
     @Override public void onNewIntent(Intent intent){
         super.onNewIntent(intent);setIntent(intent);
@@ -58,7 +63,7 @@ public final class MainActivity extends Activity {
     }
     private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
     private GradientDrawable background(int color,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;
+        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0xff344962);return d;
     }
     private TextView text(String s,int size,int color,boolean bold){
         TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);
@@ -68,7 +73,8 @@ public final class MainActivity extends Activity {
     }
     private LinearLayout card(){
         LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setPadding(dp(16),dp(15),dp(16),dp(17));
-        c.setBackground(background(SURFACE,20));
+        GradientDrawable bg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff172A47,0xff0E1C34});
+        bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff2A405E);c.setBackground(bg);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,0,0,dp(12));
         page.addView(c,p);return c;
     }
@@ -87,8 +93,8 @@ public final class MainActivity extends Activity {
         parent.addView(r,params);return r;
     }
     private TextView button(LinearLayout where,String label,Runnable click){
-        TextView b=text(label,13,TEXT,true);b.setGravity(Gravity.CENTER);b.setPadding(dp(9),dp(12),dp(9),dp(12));
-        b.setBackground(background(SURFACE2,12));
+        TextView b=text(label,12,TEXT,true);b.setGravity(Gravity.CENTER);b.setPadding(dp(9),dp(12),dp(9),dp(12));
+        b.setBackground(background(SURFACE2,16));b.setElevation(dp(1));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),0,dp(3),0);
         where.addView(b,lp);b.setOnClickListener(v->click.run());return b;
     }
@@ -104,7 +110,7 @@ public final class MainActivity extends Activity {
         for(int i=0;i<TABS.length;i++){
             final int t=i;
             TextView b=text(TABS[i],13,i==tab?0xff051426:MUTED,true);
-            b.setPadding(dp(13),dp(10),dp(13),dp(10));
+            b.setPadding(dp(15),dp(13),dp(15),dp(13));
             b.setBackground(background(i==tab?BLUE:SURFACE,14));
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-2,-2);p.setMargins(dp(3),0,dp(3),0);
             nav.addView(b,p);b.setOnClickListener(v->showTab(t));
@@ -128,12 +134,15 @@ public final class MainActivity extends Activity {
     private void showSolar(){
         header("실제 위치 기반 태양계");
         LinearLayout main=card();
-        paragraph(main,"태양 중심 · J2000 황도 좌표 · NASA/JPL 1800~2050 근사식");
+        paragraph(main,"태양 중심 · J2000 황도 좌표 · JPL 1800~2050 근사식. 행성은 실제 계산 좌표를 사용하고 크기만 알아보기 쉽게 키웠어.");
         TextView date=text(new SimpleDateFormat("yyyy-MM-dd HH:mm z",Locale.KOREA).format(new Date(solarTime)),16,TEXT,true);
         main.addView(date);
         planetView=new PlanetView(this);
         main.addView(planetView,new LinearLayout.LayoutParams(-1,dp(360)));
-        paragraph(main,"한 손가락 드래그: 3D 시점 회전 / 두 손가락: 확대·축소. 행성 크기는 시각화를 위해 확대됩니다.");
+        paragraph(main,"드래그로 시점 회전 · 두 손가락으로 확대/축소. 실제 내행성 위치를 자세히 보려면 아래 ‘내행성 확대’를 눌러봐.");
+        LinearLayout focus=row(main);
+        button(focus,"☀ 전체 태양계",()->{planetView.zoom=1;planetView.invalidate();});
+        button(focus,"🔎 내행성 확대",()->{planetView.zoom=14;planetView.invalidate();});
         LinearLayout controls=row(main);
         button(controls,"◀ 한 달",()->shiftMonth(-1));
         button(controls,"현재 시각",()->{solarTime=System.currentTimeMillis();showTab(0);});
@@ -154,7 +163,7 @@ public final class MainActivity extends Activity {
         paragraph(planets,"정밀 우주항법용 자료가 아닙니다. 지구 좌표는 지구–달 질량중심 근사입니다. 행성 표면 텍스처와 자세는 실시간 관측 영상이 아닙니다.");
         sourceButton(planets,"JPL 원본 궤도요소","https://ssd.jpl.nasa.gov/planets/approx_pos.html");
         LinearLayout widgetCard=card();
-        line(widgetCard,"홈 화면 위젯 3종","2×2 / 4×2 / 4×4");
+        line(widgetCard,"홈 화면 위젯 3종","2×2 / 4×2 / 4×4 · 내행성/외행성 실제 축척 분리");
         paragraph(widgetCard,"갤럭시 홈 화면을 길게 누르기 → 위젯 → ASTAPP → 원하는 크기 추가. 위젯에서 ◀ / 지금 / ▶ 버튼으로 시각 변경.");
     }
     private void planetDialog(int i){
@@ -285,13 +294,13 @@ public final class MainActivity extends Activity {
             super(context);setLayerType(View.LAYER_TYPE_SOFTWARE,null);
             detector=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
                 @Override public boolean onScale(ScaleGestureDetector d){
-                    zoom=Math.max(.35,Math.min(3.7,zoom*d.getScaleFactor()));invalidate();return true;
+                    zoom=Math.max(.3,Math.min(24,zoom*d.getScaleFactor()));invalidate();return true;
                 }
             });
         }
         @Override protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            SolarPainter.draw(canvas,getWidth(),getHeight(),solarTime,compressed,true,yaw,tilt,zoom);
+            SolarPainter.draw(MainActivity.this,canvas,getWidth(),getHeight(),solarTime,compressed,true,yaw,tilt,zoom);
         }
         @Override public boolean onTouchEvent(android.view.MotionEvent e){
             detector.onTouchEvent(e);
