@@ -24,6 +24,9 @@ public final class PlanetPhotos {
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final Bitmap[] HOT=new Bitmap[8];
     private static final boolean[] BUSY=new boolean[8];
+    @SuppressWarnings("unchecked")
+    private static final java.util.ArrayList<Listener>[] WAITING=new java.util.ArrayList[8];
+    static {for(int i=0;i<8;i++)WAITING[i]=new java.util.ArrayList<>();}
     private static final String[] TERMS={
         "MESSENGER Mercury global mosaic","Venus Pioneer orbiter global ultraviolet",
         "Earth blue marble full disk","Mars global Hubble full disk",
@@ -49,7 +52,11 @@ public final class PlanetPhotos {
         if(index<0||index>=8)return;
         Bitmap prior=cached(c,index);
         if(prior!=null){if(listener!=null)MAIN.post(()->listener.onPhoto(prior));return;}
-        synchronized(PlanetPhotos.class){if(BUSY[index])return;BUSY[index]=true;}
+        synchronized(PlanetPhotos.class){
+            if(listener!=null)WAITING[index].add(listener);
+            if(BUSY[index])return;
+            BUSY[index]=true;
+        }
         Context app=c.getApplicationContext();
         IO.execute(()->{
             Bitmap bitmap=null;
@@ -83,9 +90,13 @@ public final class PlanetPhotos {
                     }
                 }
             }catch(Exception ignored){}
-            synchronized(PlanetPhotos.class){HOT[index]=bitmap;BUSY[index]=false;}
+            java.util.List<Listener> callbacks;
+            synchronized(PlanetPhotos.class){
+                HOT[index]=bitmap;BUSY[index]=false;
+                callbacks=new java.util.ArrayList<>(WAITING[index]);WAITING[index].clear();
+            }
             final Bitmap result=bitmap;
-            if(listener!=null)MAIN.post(()->listener.onPhoto(result));
+            for(Listener cb:callbacks)MAIN.post(()->cb.onPhoto(result));
         });
     }
     private static Bitmap download(URL url)throws Exception{
