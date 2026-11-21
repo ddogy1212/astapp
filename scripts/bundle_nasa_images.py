@@ -74,6 +74,23 @@ def fetch(item):
     filepath=OUTPUT/(stem+".jpg")
     meta={}
     try:
+        # M13: Hubble photo is provided by NASA Science as WebP. Android 8+
+        # BitmapFactory decodes this format natively; do not fake a JPEG header.
+        if stem=="cosmic_6":
+            url="https://science.nasa.gov/wp-content/uploads/2023/04/m13-xlarge_web-jpg.webp"
+            try:
+                blob=get(url,2100000)
+                if blob[:4]==b"RIFF" and blob[8:12]==b"WEBP":
+                    (OUTPUT/"cosmic_6.webp").write_bytes(blob)
+                    meta={"nasa_id":"",
+                          "title":"Messier 13 · Hubble globular cluster observation",
+                          "center":"NASA / ESA",
+                          "credit":"NASA, ESA and Hubble Heritage Team (STScI/AURA)",
+                          "details":"https://science.nasa.gov/image-detail/m13-xlarge_web/",
+                          "size":len(blob)}
+                    return (stem,meta,None)
+            except Exception as ex:
+                print("M13 NASA Hubble photo unavailable",str(ex)[:100],flush=True)
         if stem in PREFERRED:
             nasa_id,title=PREFERRED[stem]
             url=f"https://images-assets.nasa.gov/image/{nasa_id}/{nasa_id}~thumb.jpg"
